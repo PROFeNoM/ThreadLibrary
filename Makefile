@@ -10,16 +10,16 @@ make valgrind:
 
 make pthreads:
 
-make graĥs:
+make graphs:
 
 make install:
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(CBIBFLAG) $^ -c -o $@
 
-example: example.o
-	gcc example.o -pthread -o example
+example_libc: example.o
+	$(CC) $^ -pthread -o $@
 
 
 make clean:
-	rm -f *.o example
+	rm -f *.o example_libc
