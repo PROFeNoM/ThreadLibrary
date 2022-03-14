@@ -10,7 +10,7 @@ make valgrind:
 
 make pthreads:
 
-make graĥs:
+make graphs:
 
 make install:
 
