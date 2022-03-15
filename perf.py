@@ -1,25 +1,34 @@
 
-"""
-perfs (s) haut / param (nb threads, nb yield, param n pour fibo)
-2 courbes (thread et pthread)
-
-"""
-
 # Import system modules
 import subprocess
-from time import time
+import matplotlib.pyplot as plt
 
-# Run 1
-subprocess.run("./test")
-f = open("time.txt", "r");
-time1 = str(print(f.read()))
-print("Time 1 " + time1)
-time1 = float(time1)
-print("Time 1 " + time1)
 
-# Run 2
-subprocess.run("./test")
-f = open("time.txt", "r");
-time2 = str(print(f.read()))
-time2 = float(time2)
-print("Time 1 " + str(time2))
+def getTime(fileName):
+    subprocess.run(fileName)
+
+    f = open("time.txt", "r")
+    timeString = f.read()
+    times = timeString.split("\n")
+    f.close()
+
+    return float(times[0])
+
+time1 = []
+time2 = []
+
+
+for i in range(1, 11):
+    time1.append(getTime("./test"))
+    time2.append(getTime("./test"))
+
+
+nbThreads = range(1, 11)
+
+
+plt.plot(nbThreads, time1, '-r')
+plt.plot(nbThreads, time2, '-b')
+plt.ylabel("Temps en secondes")
+plt.xlabel("Nombre de threads")
+plt.title("Performances de notre librairie et de la librairie pthread")
+plt.show()
