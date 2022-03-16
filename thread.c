@@ -6,7 +6,6 @@
 
 #define FIFO_SIZE 10
 #define THREAD_STACK_SIZE 64*1024 // CONSTANTE à requestionner §§§§§§§§§ 
-#define ORDO NULL
 
 
 /* identifiant de thread
@@ -17,7 +16,8 @@
 
 thread_t * FIFO = NULL;
 thread_t * T_RUNNING;
-
+ucontext_t * ORDO_CONTEXT;
+makecontext(ORDO_CONTEXT, (void (*)(void)) thread_yield, 0); // Fixe le context de l'ordonnanceur
 
 
 /* recuperer l'identifiant du thread courant.
@@ -35,7 +35,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg){
     ucontext_t uc = newthread->context;
     uc.uc_stack.ss_size = THREAD_STACK_SIZE;
     uc.uc_stack.ss_sp = malloc(uc.uc_stack.ss_size);
-    uc.uc_link = ORDO;  // Le principe est qu'à la fin du thread, la main soi redonnée à l'ordonnanceur
+    uc.uc_link = ORDO_CONTEXT;  // Le principe est qu'à la fin du thread, la main soi redonnée à l'ordonnanceur
     makecontext(&uc, (void (*)(void)) func, 1, funcarg);
 
     push_last(FIFO, newthread); // Ajout du nouveau thread en fin de fifo
@@ -49,8 +49,10 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg){
 
 /* passer la main à un autre thread.
  */
-int thread_yield(void){
-    return 0;
+int thread_yield(void){ // N'ENREGISTRE PAS LE CONTEXT DU THREAD SORTANT
+    run_next_thread(&FIFO, &T_RUNNING);
+    setcontext(T_RUNNING);
+    return -1;
 }
 
 /* attendre la fin d'exécution d'un thread.
@@ -70,5 +72,5 @@ int thread_join(thread_t thread, void **retval){
  * n'est pas correctement implémenté (il ne doit jamais retourner).
  */
 void thread_exit(void *retval) __attribute__ ((__noreturn__)){
-    
+
 }

@@ -18,6 +18,6 @@ void push_last(thread_t * fifo, thread_t * last){
 
 // ! les traitements autres que sur la fifo ne sont pas supportés
 void run_next_thread(thread_t ** fifo, thread_t ** t_running){
-    push_last(*fifo, *t_running);
+    // push_last(*fifo, *t_running);
     *t_running = pop_first(fifo);
 }
