@@ -17,13 +17,16 @@ make install:
 # %.o: %.c
 # 	$(CC) $(CFLAGS) $(CBIBFLAG) $^ -c -o $@
 
+utils.o: utils.c
+	$(CC) $^ -c -o $@
+
 example_libc: example.o
 	$(CC) $^ -pthread -o $@
 
 example.o: example.c
 	$(CC) $(CFLAGS) $^ -c -o $@
 
-example: example.o
+example: example.o utils.o
 	$(CC) $^ -pthread -o $@
 
 

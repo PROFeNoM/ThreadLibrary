@@ -1,6 +1,12 @@
 #include <stdio.h>
+#include <ucontext.h>
 
 #include "thread.h"
+#include "utils.h"
+
+#define FIFO_SIZE 10
+#define THREAD_STACK_SIZE 64*1024 // CONSTANTE à requestionner §§§§§§§§§ 
+#define ORDO NULL
 
 
 /* identifiant de thread
@@ -8,34 +14,52 @@
  *     mais attention aux inconvénient des tableaux de threads
  *     (consommation mémoire, cout d'allocation, ...).
  */
-// typedef void * thread_t;
-struct thread_struct {
-  int id;
-};
-typedef struct thread_struct thread_t;
 
-thread_t CURRENT_THREAD_T;
+thread_t * FIFO = NULL;
+thread_t * T_RUNNING;
+
+
 
 /* recuperer l'identifiant du thread courant.
  */
 thread_t thread_self(void) {
-  return CURRENT_THREAD_T;
+    return *T_RUNNING;
 }
 
 /* creer un nouveau thread qui va exécuter la fonction func avec l'argument funcarg.
  * renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
-extern int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg);
+int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg){
+    thread_t * newthread = malloc(sizeof(thread_t));
+    newthread->next = NULL;
+    ucontext_t uc = newthread->context;
+    uc.uc_stack.ss_size = THREAD_STACK_SIZE;
+    uc.uc_stack.ss_sp = malloc(uc.uc_stack.ss_size);
+    uc.uc_link = ORDO;  // Le principe est qu'à la fin du thread, la main soi redonnée à l'ordonnanceur
+    makecontext(&uc, (void (*)(void)) func, 1, funcarg);
+
+    push_last(FIFO, newthread); // Ajout du nouveau thread en fin de fifo
+    
+    if((newthread == NULL) || (uc.uc_stack.ss_sp == NULL)){
+        return -1;
+    } else {
+        return 0;
+    }
+}
 
 /* passer la main à un autre thread.
  */
-extern int thread_yield(void);
+int thread_yield(void){
+    return 0;
+}
 
 /* attendre la fin d'exécution d'un thread.
  * la valeur renvoyée par le thread est placée dans *retval.
  * si retval est NULL, la valeur de retour est ignorée.
  */
-extern int thread_join(thread_t thread, void **retval);
+int thread_join(thread_t thread, void **retval){
+    return 0;
+}
 
 /* terminer le thread courant en renvoyant la valeur de retour retval.
  * cette fonction ne retourne jamais.
@@ -45,4 +69,6 @@ extern int thread_join(thread_t thread, void **retval);
  * cet attribut dans votre interface tant que votre thread_exit()
  * n'est pas correctement implémenté (il ne doit jamais retourner).
  */
-extern void thread_exit(void *retval) __attribute__ ((__noreturn__));
+void thread_exit(void *retval) __attribute__ ((__noreturn__)){
+    
+}
