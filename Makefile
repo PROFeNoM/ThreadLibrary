@@ -14,10 +14,16 @@ make graphs:
 
 make install:
 
-%.o: %.c
-	$(CC) $(CFLAGS) $(CBIBFLAG) $^ -c -o $@
+# %.o: %.c
+# 	$(CC) $(CFLAGS) $(CBIBFLAG) $^ -c -o $@
 
 example_libc: example.o
+	$(CC) $^ -pthread -o $@
+
+example.o: example.c
+	$(CC) $(CFLAGS) $^ -c -o $@
+
+example: example.o
 	$(CC) $^ -pthread -o $@
 
 
