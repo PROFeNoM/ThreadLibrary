@@ -2,7 +2,6 @@
 #define __THREAD_H__
 
 #include <ucontext.h>
-
 #ifndef USE_PTHREAD
 
 /* identifiant de thread
@@ -13,9 +12,13 @@
 // typedef void * thread_t;
 typedef struct thread_struct thread_t;
 
+enum STATUS {JOINING, TERMINATED, WAITING};
+
 struct thread_struct {
   ucontext_t context;
   thread_t * next;
+  enum STATUS status;
+  void* retval;
 };
 
 
