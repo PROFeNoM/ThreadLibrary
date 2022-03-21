@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Werror
+CFLAGS=-Wall -Werror -g -O0
 CBIBFLAG=-DUSE_PTHREAD
 LIBTHREAD=-pthread
 
@@ -19,7 +19,7 @@ make install:
 # 	$(CC) $(CFLAGS) $(CBIBFLAG) $^ -c -o $@
 
 utils.o: utils.c
-	$(CC) $^ -c -o $@
+	$(CC) $(CFLAGS) $^ -c -o $@
 
 example_libc: example.o
 	$(CC) $^ $(CBIBFLAG) $(LIBTHREAD) -o $@

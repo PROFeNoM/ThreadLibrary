@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdio.h>
 
 #include "utils.h"
 
@@ -10,7 +11,12 @@ thread_t pop_first(thread_t * fifo){
 }
 
 void push_last(thread_t fifo, thread_t last){
-    while(fifo->next){
+    if (fifo == NULL) {
+        fifo = last;
+        return;
+    }
+
+    while (fifo->next){
         fifo = fifo->next;
     }
     fifo->next = last;
