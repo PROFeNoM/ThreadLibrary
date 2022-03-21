@@ -1,6 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Werror
 CBIBFLAG=-DUSE_PTHREAD
+LIBTHREAD=-pthread
 
 all:
 
@@ -21,13 +22,17 @@ utils.o: utils.c
 	$(CC) $^ -c -o $@
 
 example_libc: example.o
-	$(CC) $^ -pthread -o $@
+	$(CC) $^ $(CBIBFLAG) $(LIBTHREAD) -o $@
 
 example.o: example.c
 	$(CC) $(CFLAGS) $^ -c -o $@
 
-example: example.o utils.o
-	$(CC) $^ -pthread -o $@
+thread.o: thread.c
+	$(CC) $(CFLAGS) $^ -c -o $@
+
+example: example.o utils.o thread.o
+	$(CC) $^ $(LIBTHREAD) -o $@
+
 
 
 make clean:
