@@ -17,17 +17,17 @@ def getTime(fileName):
 time1 = []
 time2 = []
 
-
-for i in range(1, 11):
+nb_threads = 5
+for i in range(1, nb_threads):
     time1.append(getTime("./test"))
     time2.append(getTime("./test"))
 
 
-nbThreads = range(1, 11)
+RangeThreads = range(1, nb_threads)
 
 
-plt.plot(nbThreads, time1, '-r')
-plt.plot(nbThreads, time2, '-b')
+plt.plot(RangeThreads, time1, '-r')
+plt.plot(RangeThreads, time2, '-b')
 plt.ylabel("Temps en secondes")
 plt.xlabel("Nombre de threads")
 plt.title("Performances de notre librairie et de la librairie pthread")
