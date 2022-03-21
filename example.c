@@ -5,11 +5,13 @@
 static void * threadfunc(void * arg)
 {
   char *name = arg;
+  thread_t thread1 = thread_self();
   printf("je suis le thread %p, lancé avec l'argument %s\n",
-	 (void*) thread_self(), name);
+	 (void*)&thread1, name);
   thread_yield();
+  thread_t thread2 = thread_self();
   printf("je suis encore le thread %p, lancé avec l'argument %s\n",
-	 (void*) thread_self(), name);
+	 (void*)&thread2, name);
   thread_exit(arg);
 }
 
@@ -25,7 +27,7 @@ int main(int argc, char *argv[])
   err = thread_create(&thread2, threadfunc, "thread2");
   assert(!err);
   printf("le main a lancé les threads %p et %p\n",
-	 (void*) thread1, (void*) thread2);
+	 (void*)&thread1, (void*)&thread2);
 
   printf("le main attend les threads\n");
   err = thread_join(thread2, &retval2);
