@@ -20,15 +20,12 @@ graphs:
 install: libthread.so
 	mkdir -p install/{bin,lib}
 
-
 test: $(TSTFILES)
-	for file in $^;\
-	do ;\
-	$$(CC) ${file} -o ${file%.*} ;\
-	done ;\
 
-$(DST_TEST_DIR)/%.o: $(TEST_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+$(DST_TEST_DIR)/%.o: $(TEST_DIR)/%.c libthread.so
+	echo $<
+	# $(CC) $(CFLAGS) -c $^ -o $@
+
 
 libthread.so: thread.o
 	$(CC) -o $^ $@ -shared
