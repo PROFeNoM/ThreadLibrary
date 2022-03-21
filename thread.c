@@ -40,8 +40,11 @@ int thread_create(thread_t* newthread, void *(*func)(void *), void *funcarg){
     uc.uc_link = ORDO_CONTEXT;  // Le principe est qu'à la fin du thread, la main soi redonnée à l'ordonnanceur
     makecontext(&uc, (void (*)(void)) func, 1, funcarg);
 
-    push_last(FIFO, *newthread); // Ajout du nouveau thread en fin de fifo
-    
+    printf("-->%p\n", FIFO);
+    push_last(&FIFO, *newthread); // Ajout du nouveau thread en fin de fifo
+    printf("-->%p\n", FIFO);
+    run_next_thread(&FIFO, newthread);
+
     if((*newthread == NULL) || (uc.uc_stack.ss_sp == NULL)){
         return -1;
     } else {
@@ -75,7 +78,9 @@ int thread_join(thread_t thread, void **retval) {
 
 	// waiting (and calling) thread
 	thread_t waiting = thread_self();
-    waiting->status = JOINING;
+    //printf("[DEBUG] waiting = %p\n", waiting);
+    //printf("[DEBUG] waiting = %p\n", *waiting);
+    //(*waiting).status = JOINING;
 	to_wait->next = waiting;  // !!!! Find a way to tell the thread to wait to run calling thread after it is done, maybe using an insert in the FIFO idk
 
 	// if thread to wait is waiting another thread
@@ -93,11 +98,11 @@ int thread_join(thread_t thread, void **retval) {
 	}
 
 	// else, launch the thread
-	waiting->status = WAITING;
-	push_last(FIFO, waiting);
+	//waiting->status = WAITING;
+	push_last(&FIFO, waiting);
 	run_next_thread(&FIFO, &to_wait);
 
-	swapcontext(&waiting->context, &to_wait->context);
+	//swapcontext(&waiting->context, &to_wait->context);
 	return 0;
 }
 
@@ -124,7 +129,7 @@ void thread_exit(void *retval) {
 
 	// run next thread
 	thread_t next_thread = pop_first(&FIFO);
-	push_last(FIFO, current);
+	push_last(&FIFO, current);
 	run_next_thread(&FIFO, &next_thread);
 	setcontext(&next_thread->context);
 	exit(1);

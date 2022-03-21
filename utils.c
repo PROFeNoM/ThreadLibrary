@@ -5,21 +5,27 @@
 
 thread_t pop_first(thread_t * fifo){
     thread_t first = *fifo;
-    first->next = NULL;
-    *fifo = (*fifo)->next;
+    //printf("first : %p\n", *first);
+    //(*first).next = NULL;
+    printf("fifo -> %p\n", fifo);
+    printf("fifo -> %p\n", *fifo);
+    if (*fifo)
+        *fifo = (*fifo)->next;
+    else
+        fifo = &(*fifo)->next;
     return first;
 }
 
-void push_last(thread_t fifo, thread_t last){
-    if (fifo == NULL) {
-        fifo = last;
+void push_last(thread_t* fifo, thread_t last){
+    if (*fifo == NULL) {
+        *fifo = last;
         return;
     }
 
-    while (fifo->next){
-        fifo = fifo->next;
+    while ((*fifo)->next){
+        *fifo = (*fifo)->next;
     }
-    fifo->next = last;
+    (*fifo)->next = last;
 }
 
 // ! les traitements autres que sur la fifo ne sont pas supportés
