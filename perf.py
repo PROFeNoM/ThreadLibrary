@@ -1,11 +1,14 @@
 
 # Import system modules
 import subprocess
+import sys
 import matplotlib.pyplot as plt
+
+args = sys.argv[1:]
 
 
 def getTime(fileName):
-    subprocess.run(fileName)
+    subprocess.run([fileName, "a", "b"])
 
     f = open("time.txt", "r")
     timeString = f.read()
@@ -17,10 +20,14 @@ def getTime(fileName):
 time1 = []
 time2 = []
 
+filename1 = args[0]
+
+
+
 nb_threads = 5
 for i in range(1, nb_threads):
-    time1.append(getTime("./test"))
-    time2.append(getTime("./test"))
+    time1.append(getTime(filename1))
+    time2.append(getTime(filename1))
 
 
 RangeThreads = range(1, nb_threads)

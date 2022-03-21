@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
-int main()
+int main(int argc, char* argv[])
 {
     float time;
     clock_t t1, t2;
