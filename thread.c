@@ -16,8 +16,8 @@
  *     (consommation mémoire, cout d'allocation, ...).
  */
 
-thread_t * FIFO = NULL;
-thread_t * T_RUNNING;
+thread_t FIFO = NULL;
+thread_t T_RUNNING;
 ucontext_t * ORDO_CONTEXT;
 makecontext(ORDO_CONTEXT, (void (*)(void)) thread_yield, 0); // Fixe le context de l'ordonnanceur
 

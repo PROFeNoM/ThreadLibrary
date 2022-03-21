@@ -10,13 +10,13 @@
  *     (consommation mémoire, cout d'allocation, ...).
  */
 // typedef void * thread_t;
-typedef struct thread_struct thread_t;
+typedef struct thread_struct * thread_t;
 
 enum STATUS {JOINING, TERMINATED, WAITING};
 
 struct thread_struct {
   ucontext_t context;
-  thread_t * next;
+  thread_t next;
   enum STATUS status;
   void* retval;
 };
