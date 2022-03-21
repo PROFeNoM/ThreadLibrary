@@ -32,7 +32,7 @@ thread_t thread_self(void) {
  * renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
 int thread_create(thread_t* newthread, void *(*func)(void *), void *funcarg){
-    newthread = malloc(sizeof(struct thread_struct));
+    (*newthread) = malloc(sizeof(struct thread_struct));
     (*newthread)->next = NULL;
     ucontext_t uc = (*newthread)->context;
     uc.uc_stack.ss_size = THREAD_STACK_SIZE;
