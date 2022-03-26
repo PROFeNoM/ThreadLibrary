@@ -2,107 +2,181 @@
 #include <stdlib.h>
 #include <ucontext.h>
 #include <valgrind/valgrind.h>
+#include <sys/queue.h>
 
 #include "thread.h"
-#include "utils.h"
 
-#define FIFO_SIZE 10
-#define THREAD_STACK_SIZE 64*1024 // CONSTANTE à requestionner §§§§§§§§§ 
+#define THREAD_STACK_SIZE 64*1024 // CONSTANTE à requestionner §§§§§§§§§
 
+enum STATUS
+{
+	JOINING, TERMINATED, RUNNING
+};
 
-/* identifiant de thread
- * NB: pourra être un entier au lieu d'un pointeur si ca vous arrange,
- *     mais attention aux inconvénient des tableaux de threads
- *     (consommation mémoire, cout d'allocation, ...).
- */
+struct thread_struct
+{
+	TAILQ_ENTRY(thread_struct) field;
 
-thread_t FIFO = NULL;
+	ucontext_t* context;
+	thread_t previous_thread;
+	int valgrind_stackid;
+	enum STATUS status;
+
+	void* retval;
+};
+
+TAILQ_HEAD(queue, thread_struct) runq;
 thread_t T_RUNNING;
-ucontext_t * ORDO_CONTEXT;
-//makecontext(ORDO_CONTEXT, thread_yield, 0); // Fixe le context de l'ordonnanceur
+thread_t T_MAIN;
+
+void* thread_handler(void *(*func)(void*), void *funcarg) {
+	thread_exit(func(funcarg));
+	return NULL;
+}
+
+void initialize_context(thread_t thread, int initialize_stack)
+{
+	ucontext_t* uc = malloc(sizeof(ucontext_t));
+	getcontext(uc);
+	if (initialize_stack)
+	{
+		uc->uc_stack.ss_size = THREAD_STACK_SIZE;
+		uc->uc_stack.ss_sp = malloc(THREAD_STACK_SIZE);
+		thread->valgrind_stackid = VALGRIND_STACK_REGISTER(uc->uc_stack.ss_sp,
+				uc->uc_stack.ss_sp + uc->uc_stack.ss_size);
+	} else
+	{
+		thread->valgrind_stackid = -1;
+	}
+
+	thread->context = uc;
+
+}
+
+void initialize_thread(thread_t thread, int is_main_thread)
+{
+	initialize_context(thread, !is_main_thread);
+	thread->status = RUNNING;
+	thread->previous_thread = NULL;
+
+}
+
+void free_thread(thread_t thread_to_free)
+{
+	// NOTE: Let the destructor free the main, at the end of execution ?
+	// NOTE: While testing, the main thread has never been called as a parameter of this function
+	// NOTE: However, if, eventually, the main thread happens to be called by this func, then an if clause should be used not to free it
+	free(thread_to_free->context->uc_stack.ss_sp);
+	free(thread_to_free->context);
+	free(thread_to_free);
+	thread_to_free = NULL;
+}
+
+__attribute__((unused)) __attribute__((constructor)) void initialize_runq()
+{
+	TAILQ_INIT(&runq);
+
+	thread_t main_thread = malloc(sizeof(struct thread_struct));
+	initialize_thread(main_thread, 1);
+	TAILQ_INSERT_HEAD(&runq, main_thread, field);
+
+	T_RUNNING = T_MAIN = main_thread;
+}
+
+__attribute__((unused)) __attribute__((destructor)) void destroy_runq()
+{
+	if (!TAILQ_EMPTY(&runq))
+	{
+		thread_t thread_to_free;
+		TAILQ_FOREACH(thread_to_free, &runq, field);
+		if (thread_to_free) free_thread(thread_to_free);
+	}
+
+	//if (T_MAIN != T_RUNNING) free_thread(T_RUNNING);
+	free(T_MAIN->context);
+	free(T_MAIN);
+	T_MAIN = NULL;
+}
 
 
 /* recuperer l'identifiant du thread courant.
  */
-thread_t thread_self(void) {
-    return T_RUNNING;
+thread_t thread_self(void)
+{
+	return T_RUNNING;
 }
 
 /* creer un nouveau thread qui va exécuter la fonction func avec l'argument funcarg.
  * renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
-int thread_create(thread_t* newthread, void *(*func)(void *), void *funcarg){
-    (*newthread) = malloc(sizeof(struct thread_struct));
-    (*newthread)->next = NULL;
-    ucontext_t uc = (*newthread)->context;
-    uc.uc_stack.ss_size = THREAD_STACK_SIZE;
-    uc.uc_stack.ss_sp = malloc(uc.uc_stack.ss_size);
-    uc.uc_link = ORDO_CONTEXT;  // Le principe est qu'à la fin du thread, la main soi redonnée à l'ordonnanceur
-    makecontext(&uc, (void (*)(void)) func, 1, funcarg);
+int thread_create(thread_t* newthread, void* (* func)(void*), void* funcarg)
+{
+	// Create a new thread
+	(*newthread) = malloc(sizeof(struct thread_struct));
 
-    printf("-->%p\n", FIFO);
-    push_last(&FIFO, *newthread); // Ajout du nouveau thread en fin de fifo
-    printf("-->%p\n", FIFO);
-    run_next_thread(&FIFO, newthread);
+	initialize_thread(*newthread, 0);
+	makecontext((*newthread)->context, (void (*)(void))thread_handler, 2, func, funcarg);
 
-    if((*newthread == NULL) || (uc.uc_stack.ss_sp == NULL)){
-        return -1;
-    } else {
-        return 0;
-    }
+	// Add thread at the end of the list
+	TAILQ_INSERT_TAIL(&runq, *newthread, field);
+
+	return 0;
 }
 
 /* passer la main à un autre thread.
  */
-int thread_yield(void){ // N'ENREGISTRE PAS LE CONTEXT DU THREAD SORTANT
-    run_next_thread(&FIFO, &T_RUNNING);
-    setcontext(&T_RUNNING->context);
-    return -1;
+int thread_yield(void)
+{
+	thread_t current_thread = thread_self();
+	thread_t next_thread = TAILQ_NEXT(current_thread, field);
+
+	// End of the list ==> go back the the beginning
+	if (next_thread == NULL) next_thread = TAILQ_FIRST(&runq);
+
+	// Search for the next not joining thread
+	while (current_thread != next_thread && next_thread->status == JOINING)
+	{
+		next_thread = TAILQ_NEXT(next_thread, field);
+		if (next_thread == NULL) next_thread = TAILQ_FIRST(&runq);
+	}
+
+	// Swap both threads
+	if (next_thread != current_thread) {
+		T_RUNNING = next_thread;
+		swapcontext(current_thread->context, thread_self()->context);
+	}
+
+	return 0;
 }
 
 /* attendre la fin d'exécution d'un thread.
  * la valeur renvoyée par le thread est placée dans *retval.
  * si retval est NULL, la valeur de retour est ignorée.
  */
-int thread_join(thread_t thread, void **retval) {
-	// NOTE: Do not work (or maybe, idk), since I can't compile shit
-	// NOTE: ik there's are useless/too much comms but idc
-
-    // Blocks signals
-
-    // thread to wait
+int thread_join(thread_t thread, void** retval)
+{
 	thread_t to_wait = thread;
+	thread_t waiting_thread = thread_self();
 
-	// if thread to wait doesn't exist
-	if (!to_wait) return -1;
+	if (to_wait->status != TERMINATED)
+	{
+		waiting_thread->status = JOINING;
 
-	// waiting (and calling) thread
-	thread_t waiting = thread_self();
-    //printf("[DEBUG] waiting = %p\n", waiting);
-    //printf("[DEBUG] waiting = %p\n", *waiting);
-    //(*waiting).status = JOINING;
-	to_wait->next = waiting;  // !!!! Find a way to tell the thread to wait to run calling thread after it is done, maybe using an insert in the FIFO idk
-
-	// if thread to wait is waiting another thread
-	if (to_wait->status == WAITING) return -1;
+		// Current thread waits for thread to wait to terminate
+		while (to_wait->status != TERMINATED)
+		{
+			T_RUNNING = to_wait;
+			to_wait->previous_thread = waiting_thread;
+			swapcontext(waiting_thread->context, T_RUNNING->context);
+		}
+	}
 
 	// save retval's addr
 	if (retval != NULL) *retval = to_wait->retval;
 
-	// if the thread is done, free et leave
-	if (to_wait->status == TERMINATED) {
-		//free(to_wait->context.uc_stack.ss_sp);
-		//free(to_wait->context);
-		//free(to_wait);
-		return 0;
-	}
+	// thread is done, free and leave
+	free_thread(to_wait);
 
-	// else, launch the thread
-	//waiting->status = WAITING;
-	push_last(&FIFO, waiting);
-	run_next_thread(&FIFO, &to_wait);
-
-	//swapcontext(&waiting->context, &to_wait->context);
 	return 0;
 }
 
@@ -114,23 +188,57 @@ int thread_join(thread_t thread, void **retval) {
  * cet attribut dans votre interface tant que votre thread_exit()
  * n'est pas correctement implémenté (il ne doit jamais retourner).
  */
-void thread_exit(void *retval) {
-	// NOTE: Do not work (or maybe, idk), since I can't compile shit
-	// NOTE: ik there's are useless/too much comms but idc
-
+void thread_exit(void* retval)
+{
+	//printf("Called thread exit on %p\n", thread_self());
 	// current thread to terminate
-	thread_t current = thread_self();
+	thread_t current_thread = thread_self();
+	current_thread->retval = retval;
+	current_thread->status = TERMINATED;
+	TAILQ_REMOVE(&runq, current_thread, field);
 
-	// get retval
-	current->retval = retval;
+	thread_t next_thread;
 
-	// update status
-	current->status = TERMINATED;
+	// Check if a thread is waiting for the current thread to terminate (cf. thread_join)
+	if (current_thread->previous_thread != NULL)
+	{
+		// Run waiting thread next
+		next_thread = current_thread->previous_thread;
+		next_thread->status = RUNNING;
+	}
+	else
+	{
+		next_thread = TAILQ_NEXT(current_thread, field);
 
-	// run next thread
-	thread_t next_thread = pop_first(&FIFO);
-	push_last(&FIFO, current);
-	run_next_thread(&FIFO, &next_thread);
-	setcontext(&next_thread->context);
-	exit(1);
+		if (next_thread == NULL)
+		{
+			if (TAILQ_EMPTY(&runq))
+			{
+				// There's no other thread than the main one
+				setcontext(T_MAIN->context);
+				exit(0);
+			}
+			else
+			{
+				// Take the logical next thread
+				next_thread = TAILQ_FIRST(&runq);
+			}
+		}
+	}
+
+	T_RUNNING = next_thread;
+
+	// Prioritize list's threads over the main one
+	if (current_thread == T_MAIN && !TAILQ_EMPTY(&runq))
+		swapcontext(current_thread->context, T_RUNNING->context);
+	else
+		setcontext(T_RUNNING->context);
+
+	exit(0);
 }
+
+// Here just so 61-mutex.c can compile, although it obviously doesn't yield the correct result
+int thread_mutex_init(thread_mutex_t *mutex){(void)(mutex); return 0;}
+int thread_mutex_destroy(thread_mutex_t *mutex){(void)(mutex); return 0;}
+int thread_mutex_lock(thread_mutex_t *mutex){(void)(mutex); return 0;}
+int thread_mutex_unlock(thread_mutex_t *mutex){(void)(mutex); return 0;}

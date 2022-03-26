@@ -13,6 +13,8 @@ static void * threadfunc(void * arg)
   printf("je suis encore le thread %p, lancé avec l'argument %s\n",
 	 (void*)&thread2, name);
   thread_exit(arg);
+
+  return NULL;
 }
 
 int main(int argc, char *argv[])
