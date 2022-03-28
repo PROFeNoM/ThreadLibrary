@@ -63,6 +63,7 @@ void initialize_thread(thread_t thread, int is_main_thread)
 
 void free_thread(thread_t thread_to_free)
 {
+	//printf("CAlled free on %p\n", thread_to_free);
     if (thread_to_free != NULL && thread_to_free != T_MAIN) {
         VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
         free(thread_to_free->context->uc_stack.ss_sp);
@@ -83,13 +84,30 @@ __attribute__((unused)) __attribute__((constructor)) void initialize_runq()
 	T_RUNNING = T_MAIN = main_thread;
 }
 
+
+void print_queue()
+{
+	printf("MAIN: %p\n", T_MAIN);
+	/*thread_t thread;
+	TAILQ_FOREACH(thread, &runq, field) printf("%s%p%s -> ",
+			thread == T_RUNNING ? "[" : "", thread, thread == T_RUNNING ? "]" : "");*/
+	thread_t n1 = TAILQ_FIRST(&runq), n2;
+	while (n1 != NULL){
+		n2 = TAILQ_NEXT(n1, field);
+		printf("%s%p%s -> ", n1 == T_RUNNING ? "[" : "", n1, n1 == T_RUNNING ? "]" : "");
+		n1 = n2;
+	}
+	printf("\n");
+}
+
 __attribute__((unused)) __attribute__((destructor)) void destroy_runq()
 {
-	if (!TAILQ_EMPTY(&runq))
+	thread_t n1 = TAILQ_FIRST(&runq), n2;
+	while (n1 != NULL)
 	{
-		thread_t thread_to_free;
-		TAILQ_FOREACH(thread_to_free, &runq, field);
-		if (thread_to_free) free_thread(thread_to_free);
+		n2 = TAILQ_NEXT(n1, field);
+		free_thread(n1);
+		n1 = n2;
 	}
 
 	if (T_MAIN != T_RUNNING) free_thread(T_RUNNING);
@@ -123,28 +141,37 @@ int thread_create(thread_t* newthread, void* (* func)(void*), void* funcarg)
 	return 0;
 }
 
+thread_t get_next_thread()
+{
+	thread_t current_thread = thread_self();
+	if (current_thread->previous_thread != NULL)
+	{
+		// Run waiting thread next
+		return current_thread->previous_thread;
+	}
+
+	if (TAILQ_EMPTY(&runq)) return T_MAIN;
+
+	thread_t next_thread = TAILQ_NEXT(current_thread, field);
+	if (next_thread == NULL) next_thread = TAILQ_FIRST(&runq);
+
+	return next_thread;
+}
+
+void set_next_thread(thread_t next_thread)
+{
+	thread_t current_thread = thread_self();
+	next_thread->status = RUNNING;
+	T_RUNNING = next_thread;
+	swapcontext(current_thread->context, T_RUNNING->context);
+}
+
 /* passer la main à un autre thread.
  */
 int thread_yield(void)
 {
-	thread_t current_thread = thread_self();
-	thread_t next_thread = TAILQ_NEXT(current_thread, field);
-
-	// End of the list ==> go back the the beginning
-	if (next_thread == NULL) next_thread = TAILQ_FIRST(&runq);
-
-	// Search for the next not joining thread
-	while (current_thread != next_thread && next_thread->status == JOINING)
-	{
-		next_thread = TAILQ_NEXT(next_thread, field);
-		if (next_thread == NULL) next_thread = TAILQ_FIRST(&runq);
-	}
-
-	// Swap both threads
-	if (next_thread != current_thread) {
-		T_RUNNING = next_thread;
-		swapcontext(current_thread->context, thread_self()->context);
-	}
+	// Get and Swap both threads
+	set_next_thread(get_next_thread());
 
 	return 0;
 }
@@ -175,7 +202,7 @@ int thread_join(thread_t thread, void** retval)
 	if (retval != NULL) *retval = to_wait->retval;
 
 	// thread is done, free and leave
-	free_thread(to_wait);
+	if (to_wait != T_MAIN) free_thread(to_wait);
 
 	return 0;
 }
@@ -190,49 +217,16 @@ int thread_join(thread_t thread, void** retval)
  */
 void thread_exit(void* retval)
 {
-	//printf("Called thread exit on %p\n", thread_self());
 	// current thread to terminate
 	thread_t current_thread = thread_self();
 	current_thread->retval = retval;
 	current_thread->status = TERMINATED;
 	TAILQ_REMOVE(&runq, current_thread, field);
 
-	thread_t next_thread;
-
-	// Check if a thread is waiting for the current thread to terminate (cf. thread_join)
-	if (current_thread->previous_thread != NULL)
-	{
-		// Run waiting thread next
-		next_thread = current_thread->previous_thread;
-		next_thread->status = RUNNING;
-	}
+	if (TAILQ_EMPTY(&runq))
+		setcontext(T_MAIN->context);
 	else
-	{
-		next_thread = TAILQ_NEXT(current_thread, field);
-
-		if (next_thread == NULL)
-		{
-			if (TAILQ_EMPTY(&runq))
-			{
-				// There's no other thread than the main one
-				setcontext(T_MAIN->context);
-				exit(0);
-			}
-			else
-			{
-				// Take the logical next thread
-				next_thread = TAILQ_FIRST(&runq);
-			}
-		}
-	}
-
-	T_RUNNING = next_thread;
-
-	// Prioritize list's threads over the main one
-	if (current_thread == T_MAIN && !TAILQ_EMPTY(&runq))
-		swapcontext(current_thread->context, T_RUNNING->context);
-	else
-		setcontext(T_RUNNING->context);
+		thread_yield();
 
 	exit(0);
 }
