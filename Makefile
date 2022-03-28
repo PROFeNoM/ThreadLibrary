@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -Werror -g -O0 -I .
 CBIBFLAG = -DUSE_PTHREAD
+PTHREAD = -pthread
 USEPTHREAD ?= 0
-LIBTHREAD = -pthread
 DST_TEST_BIN = install/bin
 DST_TEST_LIB = install/lib
 TEST_DIR = tst
@@ -22,7 +22,7 @@ pthreads:
 
 graphs:
 
-install: repositories $(LIBTHREAD) $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
+install: repositories $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
 
 
 
@@ -38,21 +38,28 @@ repositories:
 $(DST_TEST_BIN)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
-$(DST_TEST_BIN)/%:
+$(DST_TEST_BIN)/%: $(LIBTHREAD)
 ifeq ($(USEPTHREAD),1)
-	$(CC) $(CFLAGS) $(CBIBFLAG) $@.o -o $@ $(LIBTHREAD)
+	$(CC) -o $@_c $@.o $(CBIBFLAG) $(PTHREAD)
 else
-	$(CC) $(CFLAGS) $@.o -o $@ $(LIBTHREAD)
+	$(CC) $@.o $(LIBTHREAD) -o $@
 endif
 
 
 
-our_pthreads: repositories $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
+our_pthreads: repositories $(TSTFILESO) $(TSTFILES) delete_o_bin
 
 
 
 delete_o_bin:
 	rm -f $(DST_TEST_BIN)/*.o
+
+#
+# example.o: example.c
+# 	$(CC) $(CFLAGS) $^ -c -o $@
+#
+# example_libc: example.o
+# 	$(CC) $^ $(CBIBFLAG) $(PTHREAD) -o $@
 
 
 make clean:

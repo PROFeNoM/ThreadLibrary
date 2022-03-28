@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 args = sys.argv[1:]
 
-if (len(args) < 1):
-    print("Erreur - Besoin du nom du fichier tester")
+if (len(args) < 2):
+    print("Erreur - Besoin du nom des 2 fichiers à tester")
     exit()
 
 def getTime(fileName):
@@ -25,11 +25,12 @@ time1 = []
 time2 = []
 
 filename1 = args[0]
+filename2 = args[1]
 
 nb_threads = 5
 for i in range(1, nb_threads):
     time1.append(getTime(filename1))
-    time2.append(getTime(filename1))
+    time2.append(getTime(filename2))
 
 
 RangeThreads = range(1, nb_threads)
