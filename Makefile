@@ -1,60 +1,43 @@
-CC=gcc
-CFLAGS=-Wall -Werror -g -O0
-CBIBFLAG=-DUSE_PTHREAD
-LIBTHREAD=-pthread
-DST_TEST_DIR=install/bin
-DST_TEST_LIB=install/lib
-TEST_DIR=tst
-TSTFILES=$(DST_TEST_DIR)/01-main.o $(DST_TEST_DIR)/02-switch.o $(DST_TEST_DIR)/03-equity.o $(DST_TEST_DIR)/11-join.o $(DST_TEST_DIR)/12-join-main.o $(DST_TEST_DIR)/21-create-many.o $(DST_TEST_DIR)/22-create-many-recursive.o $(DST_TEST_DIR)/23-create-many-once.o $(DST_TEST_DIR)/31-switch-many.o $(DST_TEST_DIR)/32-switch-many-join.o $(DST_TEST_DIR)/33-switch-many-cascade.o $(DST_TEST_DIR)/51-fibonacci.o
-# TSTEXECS=$($(tst)/%.c, $(install/bin)/%.o, $(TSTFILES))
+CC = gcc
+CFLAGS = -Wall -Werror -g -O0 -I .
+CBIBFLAG = -DUSE_PTHREAD
+LIBTHREAD = -pthread
+DST_TEST_BIN = install/bin
+DST_TEST_LIB = install/lib
+TEST_DIR = tst
+TSTFILES = $(DST_TEST_BIN)/01-main.o $(DST_TEST_BIN)/02-switch.o $(DST_TEST_BIN)/03-equity.o $(DST_TEST_BIN)/11-join.o $(DST_TEST_BIN)/12-join-main.o $(DST_TEST_BIN)/21-create-many.o $(DST_TEST_BIN)/22-create-many-recursive.o $(DST_TEST_BIN)/23-create-many-once.o $(DST_TEST_BIN)/31-switch-many.o $(DST_TEST_BIN)/32-switch-many-join.o $(DST_TEST_BIN)/33-switch-many-cascade.o $(DST_TEST_BIN)/51-fibonacci.o
+LIBTHREAD = $(DST_TEST_LIB)/libthread.so
 
 all:
 
 check:
 
 valgrind:
+	valgrind --leack-check=full --show-reachable=yes --track-origin=yes
 
 pthreads:
 
 graphs:
 
-install: repositories libthread.so
+install: repositories $(LIBTHREAD) $(TSTFILES)
 
 
 
-repositories:
-	mkdir -p install/{bin,lib}
 
-test: libthread.so $(TSTFILES)
-
-$(DST_TEST_DIR)/%.o: $(TEST_DIR)/%.c libthread.so
-	echo $<
-	# $(CC) $(CFLAGS) -c $^ -o $@
-
-
-
-libthread.so: thread.o
-	$(CC) -fPIC -o $(DST_TEST_LIB)/$@ $^ -shared
-
-# %.o: %.c
-# 	$(CC) $(CFLAGS) $(CBIBFLAG) $^ -c -o $@
-
-utils.o: utils.c
-	$(CC) $(CFLAGS) $^ -c -o $@
-
-example_libc: example.o
-	$(CC) $^ $(CBIBFLAG) $(LIBTHREAD) -o $@
-
-example.o: example.c
-	$(CC) $(CFLAGS) $^ -c -o $@
 
 thread.o: thread.c
-	$(CC) $(CFLAGS) $^ -c -o $@
+	$(CC) -fPIC $(CFLAGS) $^ -c -o $@
 
-example: example.o utils.o thread.o
-	$(CC) $^ $(LIBTHREAD) -o $@
+$(LIBTHREAD): thread.o
+	$(CC) -shared -o $@ $^
+
+$(DST_TEST_BIN)/%.o: $(TEST_DIR)/%.c $(LIBTHREAD)
+	$(CC) $(CFLAGS) -c $^ -o $@
+
+repositories:
+	mkdir -p install/lib install/bin
 
 
 
 make clean:
-	rm -f *.o example_libc
+	rm -rf *.o example_libc install/
