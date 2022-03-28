@@ -4,11 +4,15 @@ import subprocess
 import sys
 import matplotlib.pyplot as plt
 
+
 args = sys.argv[1:]
 
+if (len(args) < 1):
+    print("Erreur - Besoin du nom du fichier tester")
+    exit()
 
 def getTime(fileName):
-    subprocess.run([fileName, "a", "b"])
+    subprocess.run(["./" + filename1, "a"])
 
     f = open("time.txt", "r")
     timeString = f.read()
@@ -21,8 +25,6 @@ time1 = []
 time2 = []
 
 filename1 = args[0]
-
-
 
 nb_threads = 5
 for i in range(1, nb_threads):
