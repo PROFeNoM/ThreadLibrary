@@ -1,6 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Werror -g -O0 -I .
 CBIBFLAG = -DUSE_PTHREAD
+USEPTHREAD ?= 0
 LIBTHREAD = -pthread
 DST_TEST_BIN = install/bin
 DST_TEST_LIB = install/lib
@@ -14,15 +15,14 @@ all:
 check:
 
 valgrind:
-	valgrind --leack-check=full --show-reachable=yes --track-origin=yes
+	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
 
 pthreads:
+	make USEPTHREAD=1 our_pthreads
 
 graphs:
 
 install: repositories $(LIBTHREAD) $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
-
-
 
 
 
@@ -38,13 +38,22 @@ repositories:
 $(DST_TEST_BIN)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
-$(DST_TEST_BIN)/%: $(TEST_DIR)/%.o
-	$(CC) $(CFLAGS) $^ -o $@ $(LIBTHREAD)
+$(DST_TEST_BIN)/%:
+ifeq ($(USEPTHREAD),1)
+	$(CC) $(CFLAGS) $(CBIBFLAG) $@.o -o $@ $(LIBTHREAD)
+else
+	$(CC) $(CFLAGS) $@.o -o $@ $(LIBTHREAD)
+endif
+
+
+
+our_pthreads: repositories $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
+
+
 
 delete_o_bin:
 	rm -f $(DST_TEST_BIN)/*.o
 
 
-
 make clean:
-	rm -rf *.o example_libc install/
+	rm -rf *.o install/
