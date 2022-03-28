@@ -66,7 +66,8 @@ void free_thread(thread_t thread_to_free)
 	// NOTE: Let the destructor free the main, at the end of execution ?
 	// NOTE: While testing, the main thread has never been called as a parameter of this function
 	// NOTE: However, if, eventually, the main thread happens to be called by this func, then an if clause should be used not to free it
-	free(thread_to_free->context->uc_stack.ss_sp);
+    VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
+    free(thread_to_free->context->uc_stack.ss_sp);
 	free(thread_to_free->context);
 	free(thread_to_free);
 	thread_to_free = NULL;
