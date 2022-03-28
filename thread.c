@@ -63,14 +63,13 @@ void initialize_thread(thread_t thread, int is_main_thread)
 
 void free_thread(thread_t thread_to_free)
 {
-	// NOTE: Let the destructor free the main, at the end of execution ?
-	// NOTE: While testing, the main thread has never been called as a parameter of this function
-	// NOTE: However, if, eventually, the main thread happens to be called by this func, then an if clause should be used not to free it
-    VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
-    free(thread_to_free->context->uc_stack.ss_sp);
-	free(thread_to_free->context);
-	free(thread_to_free);
-	thread_to_free = NULL;
+    if (thread_to_free != NULL && thread_to_free != T_MAIN) {
+        VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
+        free(thread_to_free->context->uc_stack.ss_sp);
+        free(thread_to_free->context);
+        free(thread_to_free);
+        thread_to_free = NULL;
+    }
 }
 
 __attribute__((unused)) __attribute__((constructor)) void initialize_runq()
@@ -93,7 +92,7 @@ __attribute__((unused)) __attribute__((destructor)) void destroy_runq()
 		if (thread_to_free) free_thread(thread_to_free);
 	}
 
-	//if (T_MAIN != T_RUNNING) free_thread(T_RUNNING);
+	if (T_MAIN != T_RUNNING) free_thread(T_RUNNING);
 	free(T_MAIN->context);
 	free(T_MAIN);
 	T_MAIN = NULL;
