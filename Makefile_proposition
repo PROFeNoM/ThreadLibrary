@@ -1,0 +1,42 @@
+CC=gcc
+CFLAGS=-std=c99 -Wall -Wextra -Werror $(GSL_PATH:%=-I%/include) -Isrc -Isrc/player/player1 -Isrc/main -Isrc/serveur -Isrc/include -Itst -Itst/include -Itst/main -Itst/serveur -Itst/player 
+LDFLAGS= $(GSL_PATH:%=-L%/lib) -ldl -lm -lgsl -lgslcblas
+COFLAGS= -g -O0 -ftest-coverage -fprofile-arcs
+CSHARED=-fPIC -shared
+
+SRC:=$(wildcard src/*/*.c)
+SRC1:=$(wildcard src/*.c)
+SRT:=$(wildcard tst/*.c)
+SRTA:=$(wildcard tst/*/*.c)
+SRP:=$(wildcard src/player/*/*.c)
+
+PSO:=$(SRP:.c=.so)
+COV:=$(SRT:.c=.gcno) $(SRTA:.c=.gcno)
+PRO:=$(COV:.gcno=.gcda)
+
+
+all: build
+
+build: $(SRC) $(SRC1) $(PSO)
+	@$(CC) $(CFLAGS) $(SRC1) $(SRC) $(LDFLAGS) -o server
+
+test : $(SRP) $(SRC1) $(SRTA) $(SRT) build
+	@$(CC) $(CFLAGS) $(COFLAGS) src/player/player1/*.c src/serveur/*.c $(SRC1) $(SRTA) $(SRT) $(LDFLAGS) -o test
+
+.PHONY: install
+
+install: build test
+	@ cp src/player/*/*.so install
+	@ cp server install
+	@ cp test install/alltests
+	@ rm install/player_test1.so
+	@ rm install/player_test2.so
+	@ rm install/player_test3.so
+
+
+%.so : %.c
+	@$(CC) $(CSHARED) $(CFLAGS) src/serveur/*.c $(SRC1) $(LDFLAGS) -o $@ $<  
+
+
+clean:
+	@rm -rf server  test $(TES) $(PSO) $(COV) $(PRO) install/alltests install/*.so install/server ./*.gcno ./*.gcda ./*.gcov
