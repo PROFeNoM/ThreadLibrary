@@ -14,15 +14,13 @@ all:
 check:
 
 valgrind:
-	valgrind --leack-check=full --show-reachable=yes --track-origin=yes
+	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
 
 pthreads:
 
 graphs:
 
 install: repositories $(LIBTHREAD) $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
-
-
 
 
 
