@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Werror -g -O0 -I .
 CBIBFLAG = -DUSE_PTHREAD
-PTHREAD = -pthread
+PTHREAD = -lpthread
 USEPTHREAD ?= 0
 DST_TEST_BIN = install/bin
 DST_TEST_LIB = install/lib
@@ -27,10 +27,14 @@ install: repositories $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
 
 
 thread.o: thread.c
+ifeq ($(USEPTHREAD),0)
 	$(CC) -fPIC $(CFLAGS) $^ -c -o $@
+endif
 
 $(LIBTHREAD): thread.o
+ifeq ($(USEPTHREAD),0)
 	$(CC) -shared -o $@ $^
+endif
 
 repositories:
 	mkdir -p install/lib install/bin
@@ -38,9 +42,9 @@ repositories:
 $(DST_TEST_BIN)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
-$(DST_TEST_BIN)/%: $(LIBTHREAD)
+$(DST_TEST_BIN)/%:
 ifeq ($(USEPTHREAD),1)
-	$(CC) -o $@_c $@.o $(CBIBFLAG) $(PTHREAD)
+	$(CC) $(CFLAGS) -o $@_c $@.o $(CBIBFLAG) $(PTHREAD)
 else
 	$(CC) $@.o $(LIBTHREAD) -o $@
 endif
