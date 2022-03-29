@@ -18,7 +18,7 @@ valgrind:
 	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
 
 pthreads:
-	make USEPTHREAD=1 our_pthreads
+	make -B USEPTHREAD=1 our_pthreads
 
 graphs:
 
@@ -40,11 +40,15 @@ repositories:
 	mkdir -p install/lib install/bin
 
 $(DST_TEST_BIN)/%.o: $(TEST_DIR)/%.c
+ifeq ($(USEPTHREAD),1)
+	$(CC) $(CFLAGS) -c $^ -o $@ $(CBIBFLAG)
+else
 	$(CC) $(CFLAGS) -c $^ -o $@
+endif
 
 $(DST_TEST_BIN)/%:
 ifeq ($(USEPTHREAD),1)
-	$(CC) $(CFLAGS) -o $@_c $@.o $(CBIBFLAG) $(PTHREAD)
+	$(CC) $(CFLAGS) -o $@_c $@.o $(PTHREAD)
 else
 	$(CC) $@.o $(LIBTHREAD) -o $@
 endif
@@ -57,13 +61,6 @@ our_pthreads: repositories $(TSTFILESO) $(TSTFILES) delete_o_bin
 
 delete_o_bin:
 	rm -f $(DST_TEST_BIN)/*.o
-
-#
-# example.o: example.c
-# 	$(CC) $(CFLAGS) $^ -c -o $@
-#
-# example_libc: example.o
-# 	$(CC) $^ $(CBIBFLAG) $(PTHREAD) -o $@
 
 
 make clean:
