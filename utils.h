@@ -1,6 +1,9 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
+#define NO_LOCK -1
+#define NO_OWNER NULL
+
 #include "thread.h"
 int create_lock(void ** lock_table);
 
