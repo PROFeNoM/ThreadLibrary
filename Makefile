@@ -48,7 +48,7 @@ endif
 
 $(DST_TEST_BIN)/%:
 ifeq ($(USEPTHREAD),1)
-	$(CC) $(CFLAGS) -o $@_c $@.o $(PTHREAD)
+	$(CC) -o $@_c $@.o $(PTHREAD)
 else
 	$(CC) $@.o $(LIBTHREAD) -o $@
 endif
