@@ -2,32 +2,9 @@
 #include <stdlib.h>
 #include <ucontext.h>
 #include <valgrind/valgrind.h>
-#include <sys/queue.h>
 
 #include "thread.h"
 #include "utils.h"
-
-#define THREAD_STACK_SIZE 64*1024 // CONSTANTE à requestionner §§§§§§§§§
-
-
-enum STATUS
-{
-	JOINING, TERMINATED, RUNNING
-};
-
-struct thread_struct
-{
-	TAILQ_ENTRY(thread_struct) field;
-
-	ucontext_t* context;
-	thread_t previous_thread;
-	int valgrind_stackid;
-	enum STATUS status;
-
-	void* retval;
-
-	int waited_lock; // -1 if no lock waited
-};
 
 
 TAILQ_HEAD(queue, thread_struct) runq;
@@ -239,7 +216,54 @@ void thread_exit(void* retval)
 }
 
 // Here just so 61-mutex.c can compile, although it obviously doesn't yield the correct result
-int thread_mutex_init(thread_mutex_t *mutex){(void)(mutex); return 0;}
-int thread_mutex_destroy(thread_mutex_t *mutex){(void)(mutex); return 0;}
-int thread_mutex_lock(thread_mutex_t *mutex){(void)(mutex); return 0;}
-int thread_mutex_unlock(thread_mutex_t *mutex){(void)(mutex); return 0;}
+int thread_mutex_init(thread_mutex_t *mutex) {
+	int mut_ind = get_mutex_ind(); // Location in table for this new mutex
+	if(mutex_table_size == mut_ind){ // lock table is not long enough
+		realloc_mutex_table(&mutex_table, &mutex_table_size);
+	}
+	mutex->owner = NULL;
+	mutex->mutex_index = mut_ind;
+	mutex_table[mut_ind] = mutex;
+	return 0;
+}
+
+int thread_mutex_destroy(thread_mutex_t *mutex) {
+	mutex->owner = NULL;
+	mutex_table[mutex->mutex_index] = NULL;
+	return 0;
+}
+
+// Btw I definitively don't understand what I've try to do
+int thread_mutex_lock(thread_mutex_t *mutex) {
+	if(mutex_table[mutex->mutex_index] == NULL){ // The given lock in not valid
+		return 0;
+	}
+	// Trying to give the lock
+	thread_t t = thread_self();
+	t->waited_lock = mutex->mutex_index;
+	if(mutex->owner == NULL){
+		mutex->owner = t;
+		return 1;
+	}
+	
+	// Analysing if a dead lock is triggered
+	int res = detect_dead_lock_from_begining(mutex_table, mutex->mutex_index);
+	
+	// Applying an intelligent policy searching for the first thread to execute to climb back the lock chain
+	if(res){
+		// Restoring before dead lock
+		mutex->owner = NULL;
+		t->waited_lock = -1;
+		// thread_t to_execute = get_last_mutex_queue(t);
+		// Launch the execution here
+		mutex->owner = t;
+		t->waited_lock = mutex->mutex_index;
+	} else {
+
+	}
+	return 0;
+}
+
+int thread_mutex_unlock(thread_mutex_t *mutex) {
+	return 0;
+}

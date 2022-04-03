@@ -4,6 +4,16 @@
 #include <ucontext.h>
 #ifndef USE_PTHREAD
 
+
+#include <sys/queue.h>
+
+#define THREAD_STACK_SIZE 64*1024 // CONSTANTE à requestionner §§§§§§§§§
+
+enum STATUS
+{
+	JOINING, TERMINATED, RUNNING
+};
+
 /* identifiant de thread
  * NB: pourra être un entier au lieu d'un pointeur si ca vous arrange,
  *     mais attention aux inconvénient des tableaux de threads
@@ -11,6 +21,21 @@
  */
 //typedef void * thread_t;
 typedef struct thread_struct * thread_t;
+
+struct thread_struct
+{
+	TAILQ_ENTRY(thread_struct) field;
+
+	ucontext_t* context;
+	thread_t previous_thread;
+	int valgrind_stackid;
+	enum STATUS status;
+
+	void* retval;
+
+	int waited_lock; // -1 if no lock waited
+};
+
 
 /* recuperer l'identifiant du thread courant.
  */
@@ -43,6 +68,10 @@ extern void thread_exit(void *retval);// __attribute__ ((__noreturn__));
 
 /* Interface possible pour les mutex */
 // typedef struct thread_mutex { int dummy; } thread_mutex_t;
+typedef struct thread_mutex{ // Personnal structure
+    thread_t owner; // NULL if no owner
+    int mutex_index;
+} thread_mutex_t;
 int thread_mutex_init(thread_mutex_t *mutex);
 int thread_mutex_destroy(thread_mutex_t *mutex);
 int thread_mutex_lock(thread_mutex_t *mutex);
