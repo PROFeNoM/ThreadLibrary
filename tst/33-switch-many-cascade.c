@@ -51,11 +51,6 @@ static void * thfunc(void *_nbth)
 
 int main(int argc, char *argv[])
 {
-    /************************************/
-    float time;
-    clock_t t1, t2;
-    t1 = clock();
-    /************************************/
 
     struct timeval tv1, tv2;
     unsigned long us;
@@ -78,17 +73,6 @@ int main(int argc, char *argv[])
     printf("%d yield avec plein de threads dans join: %ld us\n", nbyield, us);
 
     printf("%ld threads créés et détruits\n", nbth);
-
-    /************************************/
-    t2 = clock();
-    time = (float) (t2 - t1)/CLOCKS_PER_SEC;
-    // Transform float to string
-    char s[50] = "";
-    sprintf(s, "%f", time);
-    FILE* f = fopen("time.txt", "w+");
-    fputs(s, f);
-    fclose(f);
-    /************************************/
 
     return 0;
 }

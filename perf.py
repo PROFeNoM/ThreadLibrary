@@ -3,7 +3,7 @@
 import subprocess
 import sys
 import matplotlib.pyplot as plt
-
+import re
 
 args = sys.argv[1:]
 
@@ -11,18 +11,30 @@ if (len(args) < 2):
     print("Erreur - Besoin du nom du 1er fichier et le nombre de threads")
     exit()
 
+def parser(result):
+    spliter = re.split(r" |\n", result.stdout.decode("utf-8"))
+
+    for i in range(0, len(spliter)):
+        if spliter[i] == "s" or spliter[i] == "us":
+            return tuple([int(spliter[i-1]), spliter[i]])
+
+    return (0, "s")
+
 def getTime(fileName):
     if len(args) == 3:
-        subprocess.run(["./" + fileName, str(nb_threads), str(nb_yields)])
+        result = subprocess.run(["./" + fileName, str(nb_threads), str(nb_yields)], stdout = subprocess.PIPE)
     elif len(args) == 2:
-        subprocess.run(["./" + fileName, str(nb_threads)])
+        result = subprocess.run(["./" + fileName, str(nb_threads)], stdout = subprocess.PIPE)
 
-    f = open("time.txt", "r")
-    timeString = f.read()
-    times = timeString.split("\n")
-    f.close()
 
-    return float(times[0])
+    (time, unit) = parser(result)
+
+    if unit == "us":
+        return time/1000
+    elif unit == "s":
+        return time*1000
+
+    return time
 
 time1 = []
 time2 = []
@@ -35,6 +47,7 @@ if len(args) == 3:
     nb_yields = int(args[2])
 step = 10
 
+
 for i in range(1, nb_threads, step):
     time1.append(getTime(filename1))
     time2.append(getTime(filename2))
@@ -43,9 +56,12 @@ for i in range(1, nb_threads, step):
 RangeThreads = range(1, nb_threads, step)
 
 
-plt.plot(RangeThreads, time1, '-r')
-plt.plot(RangeThreads, time2, '-b')
-plt.ylabel("Temps en secondes")
+plt.plot(RangeThreads, time1, '-r', label='notre bib')
+plt.plot(RangeThreads, time2, '-b', label='pthread bib')
+plt.ylabel("Temps en ms")
 plt.xlabel("Nombre de threads")
-plt.title("Performances de notre librairie et de la librairie pthread")
-plt.show()
+plt.title("Performances de notre bibliothèque et de la bibliothèque pthread")
+plt.legend()
+# plt.show()
+name = filename1.split("/")
+plt.savefig('install/graphs/' + name[2])
