@@ -12,7 +12,10 @@ if (len(args) < 2):
     exit()
 
 def getTime(fileName):
-    subprocess.run(["./" + fileName, str(nb_threads)])
+    if len(args) == 3:
+        subprocess.run(["./" + fileName, str(nb_threads), str(nb_yields)])
+    elif len(args) == 2:
+        subprocess.run(["./" + fileName, str(nb_threads)])
 
     f = open("time.txt", "r")
     timeString = f.read()
@@ -27,7 +30,9 @@ time2 = []
 filename1 = args[0]
 filename2 = filename1 + "_c"
 
-nb_threads = args[1]
+nb_threads = int(args[1])
+if len(args) == 3:
+    nb_yields = int(args[2])
 step = 10
 
 for i in range(1, nb_threads, step):

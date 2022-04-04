@@ -2,6 +2,9 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <stdint.h>
+#include <time.h>
+#include <string.h>
 #include "thread.h"
 
 /* test de plein de create-destroy consécutifs.
@@ -24,6 +27,12 @@ static void * thfunc(void *dummy __attribute__((unused)))
 
 int main(int argc, char *argv[])
 {
+  /************************************/
+  float time;
+  clock_t t1, t2;
+  t1 = clock();
+  /************************************/
+
   thread_t th;
   struct timeval tv1, tv2;
   unsigned long us;
@@ -48,5 +57,18 @@ int main(int argc, char *argv[])
   gettimeofday(&tv2, NULL);
   us = (tv2.tv_sec-tv1.tv_sec)*1000000+(tv2.tv_usec-tv1.tv_usec);
   printf("%d threads créés et détruits séquentiellement en %lu us\n", nb, us);
+
+
+  /************************************/
+  t2 = clock();
+  time = (float) (t2 - t1)/CLOCKS_PER_SEC;
+  // Transform float to string
+  char s[50] = "";
+  sprintf(s, "%f", time);
+  FILE* f = fopen("time.txt", "w+");
+  fputs(s, f);
+  fclose(f);
+  /************************************/
+
   return 0;
 }
