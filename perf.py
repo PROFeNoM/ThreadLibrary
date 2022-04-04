@@ -56,9 +56,10 @@ for i in range(1, nb_threads, step):
 RangeThreads = range(1, nb_threads, step)
 
 
-plt.plot(RangeThreads, time1, '-r')
-plt.plot(RangeThreads, time2, '-b')
+plt.plot(RangeThreads, time1, '-r', label='notre bib')
+plt.plot(RangeThreads, time2, '-b', label='pthread bib')
 plt.ylabel("Temps en ms")
 plt.xlabel("Nombre de threads")
-plt.title("Performances de notre librairie et de la librairie pthread")
+plt.title("Performances de notre bibliothèque et de la bibliothèque pthread")
+plt.legend()
 plt.show()
