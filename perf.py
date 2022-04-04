@@ -3,6 +3,7 @@
 import subprocess
 import sys
 import matplotlib.pyplot as plt
+import re
 
 args = sys.argv[1:]
 
@@ -11,8 +12,13 @@ if (len(args) < 2):
     exit()
 
 def parser(result):
-    spliter = result.stdout.decode("utf-8").split(" ")
-    return tuple([int(spliter[-2]), spliter[-1]])
+    spliter = re.split(r" |\n", result.stdout.decode("utf-8"))
+
+    for i in range(0, len(spliter)):
+        if spliter[i] == "s" or spliter[i] == "us":
+            return tuple([int(spliter[i-1]), spliter[i]])
+
+    return (0, "s")
 
 def getTime(fileName):
     if len(args) == 3:
@@ -20,12 +26,6 @@ def getTime(fileName):
     elif len(args) == 2:
         result = subprocess.run(["./" + fileName, str(nb_threads)], stdout = subprocess.PIPE)
 
-    """
-    f = open("time.txt", "r")
-    timeString = f.read()
-    times = timeString.split("\n")
-    f.close()
-    """
 
     (time, unit) = parser(result)
 
