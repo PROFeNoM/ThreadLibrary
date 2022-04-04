@@ -21,7 +21,7 @@ valgrind:
 pthreads:
 	make -B USEPTHREAD=1 our_pthreads
 
-graphs:
+graphs: repo_graph
 
 install: repositories $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
 
@@ -61,6 +61,13 @@ endif
 
 our_pthreads: repositories $(TSTFILESO) $(TSTFILES) delete_o_bin
 
+
+
+repo_graph:
+	mkdir -p install/graphs
+
+# save_graphs:
+# 	python3 perf.py $(TSTFILES) 100
 
 
 delete_o_bin:
