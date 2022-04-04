@@ -8,11 +8,11 @@ import matplotlib.pyplot as plt
 args = sys.argv[1:]
 
 if (len(args) < 2):
-    print("Erreur - Besoin des noms des 2 fichiers à tester")
+    print("Erreur - Besoin du nom du 1er fichier et le nombre de threads")
     exit()
 
 def getTime(fileName):
-    subprocess.run(["./" + filename1, "a"])
+    subprocess.run(["./" + fileName, str(nb_threads)])
 
     f = open("time.txt", "r")
     timeString = f.read()
@@ -25,15 +25,17 @@ time1 = []
 time2 = []
 
 filename1 = args[0]
-filename2 = args[1]
+filename2 = filename1 + "_c"
 
-nb_threads = 5
-for i in range(1, nb_threads):
+nb_threads = args[1]
+step = 10
+
+for i in range(1, nb_threads, step):
     time1.append(getTime(filename1))
     time2.append(getTime(filename2))
 
 
-RangeThreads = range(1, nb_threads)
+RangeThreads = range(1, nb_threads, step)
 
 
 plt.plot(RangeThreads, time1, '-r')
