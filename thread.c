@@ -98,6 +98,7 @@ __attribute__((unused)) __attribute__((destructor)) void destroy_runq()
 	free(T_MAIN->context);
 	free(T_MAIN);
 	T_MAIN = NULL;
+	free(mutex_table);
 }
 
 
@@ -238,32 +239,24 @@ int thread_mutex_lock(thread_mutex_t *mutex) {
 	if(mutex_table[mutex->mutex_index] == NULL){ // The given lock in not valid
 		return 0;
 	}
-	// Trying to give the lock
-	thread_t t = thread_self();
-	t->waited_lock = mutex->mutex_index;
-	if(mutex->owner == NULL){
-		mutex->owner = t;
+	if(mutex->owner == NULL){ // Give the lock
+		mutex->owner = thread_self();
 		return 1;
 	}
-	
-	// Analysing if a dead lock is triggered
-	int res = detect_dead_lock_from_begining(mutex_table, mutex->mutex_index);
-	
-	// Applying an intelligent policy searching for the first thread to execute to climb back the lock chain
-	if(res){
-		// Restoring before dead lock
-		mutex->owner = NULL;
-		t->waited_lock = -1;
-		// thread_t to_execute = get_last_mutex_queue(t);
-		// Launch the execution here
-		mutex->owner = t;
-		t->waited_lock = mutex->mutex_index;
-	} else {
-
+	// thread_t current = thread_self();
+	// curent->waited_lock = mutex->mutex_index;
+	thread_t owner = mutex->owner;
+	while(owner->status != TERMINATED){
+		thread_t waiting = thread_self();
+		T_RUNNING = owner;
+		owner->previous_thread = waiting;
+		swapcontext(waiting->context, T_RUNNING->context);
 	}
-	return 0;
+	mutex->owner = thread_self();
+	return 1;
 }
 
 int thread_mutex_unlock(thread_mutex_t *mutex) {
+	mutex->owner = NULL;
 	return 0;
 }
