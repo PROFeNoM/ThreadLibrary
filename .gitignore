@@ -2,3 +2,4 @@ install/
 *.o
 a.out
 example
+*.txt
