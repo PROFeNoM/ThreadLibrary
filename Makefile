@@ -10,6 +10,8 @@ TEST_DIR = tst
 TSTFILESO = $(TSTFILES:%=%.o)
 TSTFILES = $(DST_TEST_BIN)/01-main $(DST_TEST_BIN)/02-switch $(DST_TEST_BIN)/03-equity $(DST_TEST_BIN)/11-join $(DST_TEST_BIN)/12-join-main $(DST_TEST_BIN)/21-create-many $(DST_TEST_BIN)/22-create-many-recursive $(DST_TEST_BIN)/23-create-many-once $(DST_TEST_BIN)/31-switch-many $(DST_TEST_BIN)/32-switch-many-join $(DST_TEST_BIN)/33-switch-many-cascade $(DST_TEST_BIN)/51-fibonacci $(DST_TEST_BIN)/61-mutex $(DST_TEST_BIN)/62-mutex
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
+THREADONLY = $(DST_TEST_BIN)/21-create-many $(DST_TEST_BIN)/22-create-many-recursive $(DST_TEST_BIN)/23-create-many-once
+THREADANDYIELD = $(DST_TEST_BIN)/31-switch-many $(DST_TEST_BIN)/32-switch-many-join $(DST_TEST_BIN)/33-switch-many-cascade
 
 all:
 
@@ -21,7 +23,7 @@ valgrind:
 pthreads:
 	make -B USEPTHREAD=1 our_pthreads
 
-graphs: repo_graph
+graphs: repo_graph save_graphs
 
 install: repositories $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
 
@@ -66,9 +68,13 @@ our_pthreads: repositories $(TSTFILESO) $(TSTFILES) delete_o_bin
 repo_graph:
 	mkdir -p install/graphs
 
-# save_graphs:
-# 	python3 perf.py $(TSTFILES) 100
-
+save_graphs:
+	for file_1 in $(THREADONLY) ; do \
+		python3 perf.py $$file_1 100 ; \
+	done
+	for file_2 in $(THREADANDYIELD) ; do \
+		python3 perf.py $$file_2 100 5 ; \
+	done
 
 delete_o_bin:
 	rm -f $(DST_TEST_BIN)/*.o
