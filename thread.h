@@ -33,7 +33,7 @@ struct thread_struct
 
 	void* retval;
 
-	int waited_lock; // -1 if no lock waited
+	// int waited_lock; // -1 if no lock waited
 };
 
 
