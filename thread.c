@@ -72,7 +72,7 @@ __attribute__((unused)) __attribute__((constructor)) void initialize_runq()
 
 	thread_t main_thread = malloc(sizeof(struct thread_struct));
 	initialize_thread(main_thread, 1);
-
+	set_running_thread(main_thread);
 	T_RUNNING = T_MAIN = main_thread;
 }
 
@@ -152,10 +152,12 @@ thread_t get_next_thread()
 void set_next_thread(thread_t next_thread)
 {
 	thread_t current_thread = thread_self();
+
 	if (current_thread != next_thread)
 	{
 		TAILQ_REMOVE(&runq, next_thread, next_runq);
-		if (current_thread->status != TERMINATED) {
+		if (current_thread->status != TERMINATED)
+		{
 			current_thread->status = READY;
 			TAILQ_INSERT_TAIL(&runq, current_thread, next_runq);
 		}
@@ -183,6 +185,15 @@ int thread_join(thread_t thread, void** retval)
 	thread_t to_wait = thread;
 	thread_t waiting_thread = thread_self();
 
+	// Check if to_wait is in the waitq
+	thread_t n1 = TAILQ_FIRST(&waitq), n2;
+	while (n1 != NULL)
+	{
+		n2 = TAILQ_NEXT(n1, next_waitq);
+		if (n1 == to_wait) return -1;
+		n1 = n2;
+	}
+
 	if (to_wait->status == WAITING || to_wait == waiting_thread) return -1;
 
 	if (to_wait->status != TERMINATED)
@@ -194,8 +205,6 @@ int thread_join(thread_t thread, void** retval)
 		{
 			to_wait->previous_thread = waiting_thread;
 			set_next_thread(to_wait);
-			//set_running_thread(to_wait);
-			//swapcontext(waiting_thread->context, to_wait->context);
 		}
 	}
 
@@ -224,7 +233,10 @@ void thread_exit(void* retval)
 	current_thread->status = TERMINATED;
 
 	if (TAILQ_EMPTY(&runq))
-		setcontext(T_MAIN->context);
+	{
+		if (T_MAIN == T_RUNNING) return;
+		else setcontext(T_MAIN->context);
+	}
 	else
 		thread_yield();
 
