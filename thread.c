@@ -7,7 +7,7 @@
 #include "utils.h"
 
 TAILQ_HEAD(, thread_struct) runq;
-TAILQ_HEAD(, thread_struct) waitq;
+TAILQ_HEAD(, thread_struct) sleepq;
 thread_t T_RUNNING = NULL;
 thread_t T_MAIN = NULL;
 thread_mutex_t** mutex_table = NULL;
@@ -50,7 +50,6 @@ void initialize_thread(thread_t thread, int is_main_thread)
 	initialize_context(thread, !is_main_thread);
 	thread->status = READY;
 	thread->previous_thread = NULL;
-	thread->is_terminated = 0;
 }
 
 void free_thread(thread_t thread_to_free)
@@ -68,7 +67,7 @@ void free_thread(thread_t thread_to_free)
 __attribute__((unused)) __attribute__((constructor)) void initialize_runq()
 {
 	TAILQ_INIT(&runq);
-	TAILQ_INIT(&waitq);
+	TAILQ_INIT(&sleepq);
 
 	thread_t main_thread = malloc(sizeof(struct thread_struct));
 	initialize_thread(main_thread, 1);
@@ -137,7 +136,7 @@ thread_t get_next_thread()
 	if (current_thread->previous_thread != NULL)
 	{
 		// Run waiting thread next
-		TAILQ_REMOVE(&waitq, current_thread->previous_thread, next_waitq);
+		TAILQ_REMOVE(&sleepq, current_thread->previous_thread, next_sleepq);
 		return current_thread->previous_thread;
 	}
 
@@ -185,11 +184,11 @@ int thread_join(thread_t thread, void** retval)
 	thread_t to_wait = thread;
 	thread_t waiting_thread = thread_self();
 
-	// Check if to_wait is in the waitq
-	thread_t n1 = TAILQ_FIRST(&waitq), n2;
+	// Check if to_wait is in the sleepq
+	thread_t n1 = TAILQ_FIRST(&sleepq), n2;
 	while (n1 != NULL)
 	{
-		n2 = TAILQ_NEXT(n1, next_waitq);
+		n2 = TAILQ_NEXT(n1, next_sleepq);
 		if (n1 == to_wait) return -1;
 		n1 = n2;
 	}
@@ -199,7 +198,7 @@ int thread_join(thread_t thread, void** retval)
 	if (to_wait->status != TERMINATED)
 	{
 		waiting_thread->status = WAITING;
-		TAILQ_INSERT_TAIL(&waitq, waiting_thread, next_waitq);
+		TAILQ_INSERT_TAIL(&sleepq, waiting_thread, next_sleepq);
 		// Current thread waits for thread to wait to terminate
 		while (to_wait->status != TERMINATED)
 		{
@@ -283,7 +282,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 	{
 		thread_t waiting = thread_self();
 		waiting->status = WAITING;
-		TAILQ_INSERT_TAIL(&waitq, waiting, next_waitq);
+		TAILQ_INSERT_TAIL(&sleepq, waiting, next_sleepq);
 		owner->previous_thread = waiting;
 		set_next_thread(owner);
 	}
