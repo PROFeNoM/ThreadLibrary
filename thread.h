@@ -11,7 +11,7 @@
 
 enum STATUS
 {
-	JOINING, TERMINATED, RUNNING
+	WAITING, TERMINATED, RUNNING, READY
 };
 
 /* identifiant de thread
@@ -24,12 +24,15 @@ typedef struct thread_struct * thread_t;
 
 struct thread_struct
 {
-	TAILQ_ENTRY(thread_struct) field;
+	TAILQ_ENTRY(thread_struct) next_runq;
+	TAILQ_ENTRY(thread_struct) next_waitq;
+	//TAILQ_ENTRY(thread_struct) next_terminatedq;
 
 	ucontext_t* context;
 	thread_t previous_thread;
 	int valgrind_stackid;
 	enum STATUS status;
+	int is_terminated;
 
 	void* retval;
 
