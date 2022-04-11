@@ -70,7 +70,6 @@ extern void thread_exit(void *retval);// __attribute__ ((__noreturn__));
 // typedef struct thread_mutex { int dummy; } thread_mutex_t;
 typedef struct thread_mutex{ // Personnal structure
     thread_t owner; // NULL if no owner
-    int mutex_index;
 } thread_mutex_t;
 int thread_mutex_init(thread_mutex_t *mutex);
 int thread_mutex_destroy(thread_mutex_t *mutex);

@@ -10,8 +10,6 @@
 TAILQ_HEAD(queue, thread_struct) runq;
 thread_t T_RUNNING = NULL;
 thread_t T_MAIN = NULL;
-thread_mutex_t ** mutex_table = NULL;
-size_t mutex_table_size = 0;
 
 void* thread_handler(void *(*func)(void*), void *funcarg) {
 	thread_exit(func(funcarg));
