@@ -33,11 +33,25 @@ THREADANDYIELD =	$(DST_TEST_BIN)/31-switch-many \
 									$(DST_TEST_BIN)/33-switch-many-cascade
 LDLIBRARYPATH = ./install/lib/
 LIBTHREADNAME = thread
+TSTFILESWITHOUTARGS = $(DST_TEST_BIN)/01-main \
+											$(DST_TEST_BIN)/02-switch \
+											$(DST_TEST_BIN)/03-equity \
+											$(DST_TEST_BIN)/11-join \
+											$(DST_TEST_BIN)/12-join-main
+TSTFILESWITHARGS =	$(DST_TEST_BIN)/21-create-many \
+										$(DST_TEST_BIN)/22-create-many-recursive \
+										$(DST_TEST_BIN)/23-create-many-once \
+										$(DST_TEST_BIN)/31-switch-many \
+										$(DST_TEST_BIN)/32-switch-many-join \
+										$(DST_TEST_BIN)/33-switch-many-cascade \
+										$(DST_TEST_BIN)/51-fibonacci \
+										$(DST_TEST_BIN)/61-mutex \
+										$(DST_TEST_BIN)/62-mutex
 
 
 all: install
 
-check: install
+check: install exec
 
 valgrind:
 	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
@@ -100,6 +114,13 @@ save_graphs:
 
 delete_o_bin:
 	rm -f $(DST_TEST_BIN)/*.o
+
+
+exec:
+	for file_1 in $(TSTFILESWITHOUTARGS) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_1 ; \
+	done
+
 
 
 make clean:
