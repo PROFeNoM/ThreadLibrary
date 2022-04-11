@@ -13,22 +13,24 @@ int totalerr = 0;
 
 static void * thfunc2(void *dummy __attribute__((unused)))
 {
-  void *res;
+  void *res = NULL;
   int err = thread_join(th0, &res);
   printf("join th2->th0 = %d\n", err);
   totalerr += err;
   thread_exit(NULL);
+  return res;
 }
 
 static void * thfunc1(void *dummy __attribute__((unused)))
 {
-  void *res;
+  void *res = NULL;
   int err = thread_create(&th2, thfunc2, NULL);
   assert(!err);
   err = thread_join(th2, &res);
   printf("join th1->th2 = %d\n", err);
   totalerr += err;
   thread_exit(NULL);
+  return res;
 }
 
 int main()
