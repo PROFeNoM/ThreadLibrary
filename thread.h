@@ -33,6 +33,7 @@ struct thread_struct
 	enum STATUS status;
 
 	void* retval;
+    int is_in_sleepq; // Faster lookup
 
 	// int waited_lock; // -1 if no lock waited
 };
