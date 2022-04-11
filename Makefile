@@ -11,6 +11,9 @@ TSTFILES = $(DST_TEST_BIN)/01-main $(DST_TEST_BIN)/02-switch $(DST_TEST_BIN)/03-
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
 THREADONLY = $(DST_TEST_BIN)/21-create-many $(DST_TEST_BIN)/22-create-many-recursive $(DST_TEST_BIN)/23-create-many-once $(DST_TEST_BIN)/61-mutex $(DST_TEST_BIN)/62-mutex
 THREADANDYIELD = $(DST_TEST_BIN)/31-switch-many $(DST_TEST_BIN)/32-switch-many-join $(DST_TEST_BIN)/33-switch-many-cascade
+LDLIBRARYPATH = ./install/lib/
+LIBTHREADNAME = thread
+
 
 all:
 	make install
@@ -56,7 +59,7 @@ $(DST_TEST_BIN)/%:
 ifeq ($(USEPTHREAD),1)
 	$(CC) -o $@_c $@.o $(PTHREAD)
 else
-	$(CC) $@.o $(LIBTHREAD) -o $@
+	$(CC) $@.o -L$(LDLIBRARYPATH) -o $@ -l$(LIBTHREADNAME)
 endif
 
 
