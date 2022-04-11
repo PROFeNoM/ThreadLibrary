@@ -7,18 +7,37 @@ DST_TEST_BIN = install/bin
 DST_TEST_LIB = install/lib
 TEST_DIR = tst
 TSTFILESO = $(TSTFILES:%=%.o)
-TSTFILES = $(DST_TEST_BIN)/01-main $(DST_TEST_BIN)/02-switch $(DST_TEST_BIN)/03-equity $(DST_TEST_BIN)/11-join $(DST_TEST_BIN)/12-join-main $(DST_TEST_BIN)/21-create-many $(DST_TEST_BIN)/22-create-many-recursive $(DST_TEST_BIN)/23-create-many-once $(DST_TEST_BIN)/31-switch-many $(DST_TEST_BIN)/32-switch-many-join $(DST_TEST_BIN)/33-switch-many-cascade $(DST_TEST_BIN)/51-fibonacci $(DST_TEST_BIN)/61-mutex $(DST_TEST_BIN)/62-mutex# $(DST_TEST_BIN)/81-deadlock
+TSTFILES = 	$(DST_TEST_BIN)/01-main \
+						$(DST_TEST_BIN)/02-switch \
+						$(DST_TEST_BIN)/03-equity \
+						$(DST_TEST_BIN)/11-join \
+						$(DST_TEST_BIN)/12-join-main \
+						$(DST_TEST_BIN)/21-create-many \
+						$(DST_TEST_BIN)/22-create-many-recursive \
+						$(DST_TEST_BIN)/23-create-many-once \
+						$(DST_TEST_BIN)/31-switch-many \
+						$(DST_TEST_BIN)/32-switch-many-join \
+						$(DST_TEST_BIN)/33-switch-many-cascade \
+						$(DST_TEST_BIN)/51-fibonacci \
+						$(DST_TEST_BIN)/61-mutex \
+						$(DST_TEST_BIN)/62-mutex \
+						# $(DST_TEST_BIN)/81-deadlock
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
-THREADONLY = $(DST_TEST_BIN)/21-create-many $(DST_TEST_BIN)/22-create-many-recursive $(DST_TEST_BIN)/23-create-many-once $(DST_TEST_BIN)/61-mutex $(DST_TEST_BIN)/62-mutex
-THREADANDYIELD = $(DST_TEST_BIN)/31-switch-many $(DST_TEST_BIN)/32-switch-many-join $(DST_TEST_BIN)/33-switch-many-cascade
+THREADONLY =	$(DST_TEST_BIN)/21-create-many \
+							$(DST_TEST_BIN)/22-create-many-recursive \
+							$(DST_TEST_BIN)/23-create-many-once \
+							$(DST_TEST_BIN)/61-mutex \
+							$(DST_TEST_BIN)/62-mutex
+THREADANDYIELD =	$(DST_TEST_BIN)/31-switch-many \
+									$(DST_TEST_BIN)/32-switch-many-join \
+									$(DST_TEST_BIN)/33-switch-many-cascade
 LDLIBRARYPATH = ./install/lib/
 LIBTHREADNAME = thread
 
 
-all:
-	make install
+all: install
 
-check:
+check: install
 
 valgrind:
 	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
@@ -73,10 +92,10 @@ repo_graph:
 
 save_graphs:
 	for file_1 in $(THREADONLY) ; do \
-		python3 perf.py $$file_1 1000 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_1 1000 ; \
 	done
 	for file_2 in $(THREADANDYIELD) ; do \
-		python3 perf.py $$file_2 1000 10 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_2 1000 10 ; \
 	done
 
 delete_o_bin:
