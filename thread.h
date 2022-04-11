@@ -22,15 +22,23 @@ enum STATUS
 //typedef void * thread_t;
 typedef struct thread_struct * thread_t;
 
+typedef struct thread_mutex{ // Personnal structure
+    thread_t owner; // NULL if no owner
+	int is_valid; // Assert if the given lock is valid
+} thread_mutex_t;
+
 struct thread_struct
 {
 	TAILQ_ENTRY(thread_struct) next_runq;
 	TAILQ_ENTRY(thread_struct) next_sleepq;
+	TAILQ_ENTRY(thread_struct) next_lockq;
 
 	ucontext_t* context;
 	thread_t previous_thread;
 	int valgrind_stackid;
 	enum STATUS status;
+
+	thread_mutex_t * waited_lock;
 
 	void* retval;
 
@@ -69,9 +77,6 @@ extern void thread_exit(void *retval);// __attribute__ ((__noreturn__));
 
 /* Interface possible pour les mutex */
 // typedef struct thread_mutex { int dummy; } thread_mutex_t;
-typedef struct thread_mutex{ // Personnal structure
-    thread_t owner; // NULL if no owner
-} thread_mutex_t;
 int thread_mutex_init(thread_mutex_t *mutex);
 int thread_mutex_destroy(thread_mutex_t *mutex);
 int thread_mutex_lock(thread_mutex_t *mutex);

@@ -8,6 +8,7 @@
 
 TAILQ_HEAD(, thread_struct) runq;
 TAILQ_HEAD(, thread_struct) sleepq;
+TAILQ_HEAD(, thread_struct) lockq;
 thread_t T_RUNNING = NULL;
 thread_t T_MAIN = NULL;
 
@@ -66,6 +67,7 @@ __attribute__((unused)) __attribute__((constructor)) void initialize_runq()
 {
 	TAILQ_INIT(&runq);
 	TAILQ_INIT(&sleepq);
+	TAILQ_INIT(&lockq);
 
 	thread_t main_thread = malloc(sizeof(struct thread_struct));
 	initialize_thread(main_thread, 1);
@@ -102,7 +104,6 @@ __attribute__((unused)) __attribute__((destructor)) void destroy_runq()
 	free(T_MAIN->context);
 	free(T_MAIN);
 	T_MAIN = NULL;
-	free(mutex_table);
 }
 
 /* recuperer l'identifiant du thread courant.
@@ -243,53 +244,55 @@ void thread_exit(void* retval)
 // Here just so 61-mutex.c can compile, although it obviously doesn't yield the correct result
 int thread_mutex_init(thread_mutex_t* mutex)
 {
-	int mut_ind = get_mutex_ind(); // Location in table for this new mutex
-	if (mutex_table_size == mut_ind)
-	{ // lock table is not long enough
-		realloc_mutex_table(&mutex_table, &mutex_table_size);
-	}
 	mutex->owner = NULL;
-	mutex->mutex_index = mut_ind;
-	mutex_table[mut_ind] = mutex;
+	mutex->is_valid = 1;
 	return 0;
 }
 
 int thread_mutex_destroy(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
-	mutex_table[mutex->mutex_index] = NULL;
+	mutex->is_valid = 0;
 	return 0;
 }
 
-// Btw I definitively don't understand what I've try to do
 int thread_mutex_lock(thread_mutex_t* mutex)
 {
-	if (mutex_table[mutex->mutex_index] == NULL)
-	{ // The given lock in not valid
+	if(mutex->is_valid == 0){
+		return -1;
+	}
+
+	if(mutex->owner == NULL){
+		mutex->owner = thread_self();
+		return 0;
+	} else {
+		thread_t t = thread_self();
+		t->status = WAITING;
+		TAILQ_INSERT_TAIL(&lockq, t, next_lockq);
+		set_next_thread(mutex->owner);
 		return 0;
 	}
-	if (mutex->owner == NULL)
-	{ // Give the lock
-		mutex->owner = thread_self();
-		return 1;
-	}
-	// thread_t current = thread_self();
-	// curent->waited_lock = mutex->mutex_index;
-	thread_t owner = mutex->owner;
-	while (owner->status != TERMINATED)
-	{
-		thread_t waiting = thread_self();
-		waiting->status = WAITING;
-		TAILQ_INSERT_TAIL(&sleepq, waiting, next_sleepq);
-		owner->previous_thread = waiting;
-		set_next_thread(owner);
-	}
-	mutex->owner = thread_self();
-	return 1;
 }
 
 int thread_mutex_unlock(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
+
+	thread_t n1 = TAILQ_FIRST(&lockq), n2;
+	while (n1 != NULL)
+	{
+		n2 = TAILQ_NEXT(n1, next_lockq);
+		if(n1->waited_lock == mutex){
+			thread_t t = thread_self();
+			t->status = WAITING;
+			TAILQ_INSERT_TAIL(&sleepq, t, next_sleepq);
+
+			mutex->owner = n1;			
+			set_next_thread(mutex->owner);
+			return 0;
+		}
+		n1 = n2;
+	}
+
 	return 0;
 }
