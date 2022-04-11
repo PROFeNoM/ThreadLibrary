@@ -6,6 +6,12 @@
 #include "thread.h"
 #include "utils.h"
 
+#ifdef DEBUG
+#define DEBUG_PRINT(...) printf(__VA_ARGS__)
+#else
+#define DEBUG_PRINT(...)
+#endif
+
 TAILQ_HEAD(, thread_struct) runq;
 TAILQ_HEAD(, thread_struct) sleepq;
 TAILQ_HEAD(, thread_struct) lockq;
