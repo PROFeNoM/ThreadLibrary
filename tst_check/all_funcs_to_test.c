@@ -18,19 +18,10 @@
 // void initialize_thread(thread_t thread, int is_main_thread)
 // void free_thread(thread_t thread_to_free)
 // __attribute__((unused)) __attribute__((constructor)) void initialize_runq()
-// void print_queue()
+// void print_queue() // NOT TO TEST
 // __attribute__((unused)) __attribute__((destructor)) void destroy_runq()
-// thread_t thread_self(void)
-// int thread_create(thread_t* newthread, void* (* func)(void*), void* funcarg)
 // thread_t get_next_thread()
 // void set_next_thread(thread_t next_thread)
-// int thread_yield(void)
-// int thread_join(thread_t thread, void** retval)
-// void thread_exit(void* retval)
-// int thread_mutex_init(thread_mutex_t* mutex)
-// int thread_mutex_destroy(thread_mutex_t* mutex)
-// int thread_mutex_lock(thread_mutex_t* mutex)
-// int thread_mutex_unlock(thread_mutex_t* mutex)
 
 
 
