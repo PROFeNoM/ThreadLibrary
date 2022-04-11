@@ -45,8 +45,7 @@ filename2 = filename1 + "_c"
 nb_threads = int(args[1])
 if len(args) == 3:
     nb_yields = int(args[2])
-step = 10
-
+step = int(nb_threads/10)
 
 for i in range(1, nb_threads, step):
     time1.append(getTime(filename1))

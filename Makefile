@@ -70,10 +70,10 @@ repo_graph:
 
 save_graphs:
 	for file_1 in $(THREADONLY) ; do \
-		python3 perf.py $$file_1 100 ; \
+		python3 perf.py $$file_1 1000 ; \
 	done
 	for file_2 in $(THREADANDYIELD) ; do \
-		python3 perf.py $$file_2 100 5 ; \
+		python3 perf.py $$file_2 1000 10 ; \
 	done
 
 delete_o_bin:
