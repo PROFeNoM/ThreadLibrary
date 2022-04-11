@@ -38,15 +38,15 @@ TSTFILESWITHOUTARGS = $(DST_TEST_BIN)/01-main \
 											$(DST_TEST_BIN)/03-equity \
 											$(DST_TEST_BIN)/11-join \
 											$(DST_TEST_BIN)/12-join-main
-TSTFILESWITHARGS =	$(DST_TEST_BIN)/21-create-many \
+TSTFILESWITHARGS1 =	$(DST_TEST_BIN)/21-create-many \
 										$(DST_TEST_BIN)/22-create-many-recursive \
 										$(DST_TEST_BIN)/23-create-many-once \
-										$(DST_TEST_BIN)/31-switch-many \
-										$(DST_TEST_BIN)/32-switch-many-join \
-										$(DST_TEST_BIN)/33-switch-many-cascade \
-										$(DST_TEST_BIN)/51-fibonacci \
 										$(DST_TEST_BIN)/61-mutex \
 										$(DST_TEST_BIN)/62-mutex
+TSTFILESWITHARGS2 =	$(DST_TEST_BIN)/31-switch-many \
+										$(DST_TEST_BIN)/32-switch-many-join
+TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
+TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci \
 
 
 all: install
@@ -119,6 +119,18 @@ delete_o_bin:
 exec:
 	for file_1 in $(TSTFILESWITHOUTARGS) ; do \
 		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_1 ; \
+	done
+	for file_2 in $(TSTFILESWITHARGS1) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_2 20 ; \
+	done
+	for file_3 in $(TSTFILESWITHARGS2) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_3 10 20 ; \
+	done
+	for file_4 in $(TSTFILESWITHARGS3) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_4 20 5 ; \
+	done
+	for file_5 in $(TSTFILESWITHARGS4) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_5 8 ; \
 	done
 
 
