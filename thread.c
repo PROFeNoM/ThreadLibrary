@@ -71,7 +71,7 @@ void free_thread(thread_t thread_to_free)
 	}
 }
 
-__attribute__((unused)) __attribute__((constructor)) void initialize_runq()
+__attribute__((constructor)) void initialize_runq()
 {
 	TAILQ_INIT(&runq);
 	TAILQ_INIT(&sleepq);
@@ -98,15 +98,15 @@ void print_queue()
 	printf("\n");
 }
 
-__attribute__((unused)) __attribute__((destructor)) void destroy_runq()
+__attribute__((destructor)) void destroy_runq()
 {
-	/*thread_t n1 = TAILQ_FIRST(&runq), n2;
+	thread_t n1 = TAILQ_FIRST(&runq), n2;
 	while (n1 != NULL)
 	{
 		n2 = TAILQ_NEXT(n1, next_runq);
 		free_thread(n1);
 		n1 = n2;
-	}*/
+	}
 	if (T_MAIN != T_RUNNING) free_thread(T_RUNNING);
 	free(T_MAIN->context);
 	free(T_MAIN);
