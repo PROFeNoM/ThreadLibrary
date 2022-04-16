@@ -27,3 +27,8 @@
 
 // perf
 // cas limites
+
+// somme tableau (diviser-pour-régner)
+// trie tableau (différents types)
+// factorielle
+// intégrer fibonacci.c

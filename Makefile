@@ -25,9 +25,9 @@ TSTFILES = 	$(DST_TEST_BIN)/01-main \
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
 THREADONLY =	$(DST_TEST_BIN)/21-create-many \
 							$(DST_TEST_BIN)/22-create-many-recursive \
-							$(DST_TEST_BIN)/23-create-many-once \
-							$(DST_TEST_BIN)/61-mutex \
-							$(DST_TEST_BIN)/62-mutex
+							$(DST_TEST_BIN)/23-create-many-once
+							# $(DST_TEST_BIN)/61-mutex
+							# $(DST_TEST_BIN)/62-mutex
 THREADANDYIELD =	$(DST_TEST_BIN)/31-switch-many \
 									$(DST_TEST_BIN)/32-switch-many-join \
 									$(DST_TEST_BIN)/33-switch-many-cascade
