@@ -7,15 +7,51 @@ DST_TEST_BIN = install/bin
 DST_TEST_LIB = install/lib
 TEST_DIR = tst
 TSTFILESO = $(TSTFILES:%=%.o)
-TSTFILES = $(DST_TEST_BIN)/01-main $(DST_TEST_BIN)/02-switch $(DST_TEST_BIN)/03-equity $(DST_TEST_BIN)/11-join $(DST_TEST_BIN)/12-join-main $(DST_TEST_BIN)/21-create-many $(DST_TEST_BIN)/22-create-many-recursive $(DST_TEST_BIN)/23-create-many-once $(DST_TEST_BIN)/31-switch-many $(DST_TEST_BIN)/32-switch-many-join $(DST_TEST_BIN)/33-switch-many-cascade $(DST_TEST_BIN)/51-fibonacci $(DST_TEST_BIN)/61-mutex $(DST_TEST_BIN)/62-mutex# $(DST_TEST_BIN)/81-deadlock
+TSTFILES = 	$(DST_TEST_BIN)/01-main \
+						$(DST_TEST_BIN)/02-switch \
+						$(DST_TEST_BIN)/03-equity \
+						$(DST_TEST_BIN)/11-join \
+						$(DST_TEST_BIN)/12-join-main \
+						$(DST_TEST_BIN)/21-create-many \
+						$(DST_TEST_BIN)/22-create-many-recursive \
+						$(DST_TEST_BIN)/23-create-many-once \
+						$(DST_TEST_BIN)/31-switch-many \
+						$(DST_TEST_BIN)/32-switch-many-join \
+						$(DST_TEST_BIN)/33-switch-many-cascade \
+						$(DST_TEST_BIN)/51-fibonacci \
+						$(DST_TEST_BIN)/61-mutex \
+						$(DST_TEST_BIN)/62-mutex \
+						# $(DST_TEST_BIN)/81-deadlock
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
-THREADONLY = $(DST_TEST_BIN)/21-create-many $(DST_TEST_BIN)/22-create-many-recursive $(DST_TEST_BIN)/23-create-many-once $(DST_TEST_BIN)/61-mutex $(DST_TEST_BIN)/62-mutex
-THREADANDYIELD = $(DST_TEST_BIN)/31-switch-many $(DST_TEST_BIN)/32-switch-many-join $(DST_TEST_BIN)/33-switch-many-cascade
+THREADONLY =	$(DST_TEST_BIN)/21-create-many \
+							$(DST_TEST_BIN)/22-create-many-recursive \
+							$(DST_TEST_BIN)/23-create-many-once
+							# $(DST_TEST_BIN)/61-mutex
+							# $(DST_TEST_BIN)/62-mutex
+THREADANDYIELD =	$(DST_TEST_BIN)/31-switch-many \
+									$(DST_TEST_BIN)/32-switch-many-join \
+									$(DST_TEST_BIN)/33-switch-many-cascade
+LDLIBRARYPATH = ./install/lib/
+LIBTHREADNAME = thread
+TSTFILESWITHOUTARGS = $(DST_TEST_BIN)/01-main \
+											$(DST_TEST_BIN)/02-switch \
+											$(DST_TEST_BIN)/03-equity \
+											$(DST_TEST_BIN)/11-join \
+											$(DST_TEST_BIN)/12-join-main
+TSTFILESWITHARGS1 =	$(DST_TEST_BIN)/21-create-many \
+										$(DST_TEST_BIN)/22-create-many-recursive \
+										$(DST_TEST_BIN)/23-create-many-once \
+										$(DST_TEST_BIN)/61-mutex \
+										$(DST_TEST_BIN)/62-mutex
+TSTFILESWITHARGS2 =	$(DST_TEST_BIN)/31-switch-many \
+										$(DST_TEST_BIN)/32-switch-many-join
+TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
+TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci \
 
-all:
-	make install
 
-check:
+all: install
+
+check: install exec
 
 valgrind:
 	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
@@ -56,7 +92,7 @@ $(DST_TEST_BIN)/%:
 ifeq ($(USEPTHREAD),1)
 	$(CC) -o $@_c $@.o $(PTHREAD)
 else
-	$(CC) $@.o $(LIBTHREAD) -o $@
+	$(CC) $@.o -L$(LDLIBRARYPATH) -o $@ -l$(LIBTHREADNAME)
 endif
 
 
@@ -70,14 +106,33 @@ repo_graph:
 
 save_graphs:
 	for file_1 in $(THREADONLY) ; do \
-		python3 perf.py $$file_1 1000 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_1 1000000 ; \
 	done
 	for file_2 in $(THREADANDYIELD) ; do \
-		python3 perf.py $$file_2 1000 10 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_2 1000000 10 ; \
 	done
 
 delete_o_bin:
 	rm -f $(DST_TEST_BIN)/*.o
+
+
+exec:
+	for file_1 in $(TSTFILESWITHOUTARGS) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_1 ; \
+	done
+	for file_2 in $(TSTFILESWITHARGS1) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_2 20 ; \
+	done
+	for file_3 in $(TSTFILESWITHARGS2) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_3 10 20 ; \
+	done
+	for file_4 in $(TSTFILESWITHARGS3) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_4 20 5 ; \
+	done
+	for file_5 in $(TSTFILESWITHARGS4) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_5 8 ; \
+	done
+
 
 
 make clean:

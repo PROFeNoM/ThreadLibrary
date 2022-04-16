@@ -41,6 +41,7 @@ struct thread_struct
 	thread_mutex_t * waited_lock;
 
 	void* retval;
+    int is_in_sleepq; // Faster lookup
 
 	// int waited_lock; // -1 if no lock waited
 };

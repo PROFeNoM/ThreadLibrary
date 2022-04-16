@@ -55,6 +55,7 @@ void initialize_thread(thread_t thread, int is_main_thread)
 	initialize_context(thread, !is_main_thread);
 	thread->status = READY;
 	thread->previous_thread = NULL;
+    thread->is_in_sleepq = 0;
 }
 
 void free_thread(thread_t thread_to_free)
@@ -69,7 +70,7 @@ void free_thread(thread_t thread_to_free)
 	}
 }
 
-__attribute__((unused)) __attribute__((constructor)) void initialize_runq()
+__attribute__((constructor)) void initialize_runq()
 {
 	TAILQ_INIT(&runq);
 	TAILQ_INIT(&sleepq);
@@ -97,15 +98,15 @@ void print_queue()
 	printf("\n");
 }
 
-__attribute__((unused)) __attribute__((destructor)) void destroy_runq()
+__attribute__((destructor)) void destroy_runq()
 {
-	/*thread_t n1 = TAILQ_FIRST(&runq), n2;
+	thread_t n1 = TAILQ_FIRST(&runq), n2;
 	while (n1 != NULL)
 	{
 		n2 = TAILQ_NEXT(n1, next_runq);
 		free_thread(n1);
 		n1 = n2;
-	}*/
+	}
 	if (T_MAIN != T_RUNNING) free_thread(T_RUNNING);
 	free(T_MAIN->context);
 	free(T_MAIN);
@@ -118,7 +119,42 @@ thread_t thread_self(void)
 {
 	return T_RUNNING;
 }
+thread_t get_next_thread()
+{
+    thread_t current_thread = thread_self();
+    if (current_thread->previous_thread != NULL)
+    {
+        // Run waiting thread next
+        current_thread->previous_thread->is_in_sleepq = 0;
+        TAILQ_REMOVE(&sleepq, current_thread->previous_thread, next_sleepq);
+        return current_thread->previous_thread;
+    }
 
+    if (TAILQ_EMPTY(&runq)) return T_MAIN;
+
+    thread_t next_thread = TAILQ_FIRST(&runq);
+
+    TAILQ_REMOVE(&runq, next_thread, next_runq);
+    return next_thread;
+}
+
+void set_next_thread(thread_t next_thread)
+{
+    thread_t current_thread = thread_self();
+
+    if (current_thread != next_thread)
+    {
+        //printf("Setting next theead to %p\n", next_thread);
+        TAILQ_REMOVE(&runq, next_thread, next_runq);
+        if (current_thread->status != TERMINATED)
+        {
+            current_thread->status = READY;
+            TAILQ_INSERT_TAIL(&runq, current_thread, next_runq);
+        }
+        set_running_thread(next_thread);
+        swapcontext(current_thread->context, next_thread->context);
+    }
+}
 /* creer un nouveau thread qui va exécuter la fonction func avec l'argument funcarg.
  * renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
@@ -126,48 +162,13 @@ int thread_create(thread_t* newthread, void* (* func)(void*), void* funcarg)
 {
 	// Create a new thread
 	(*newthread) = malloc(sizeof(struct thread_struct));
-
+    //printf("Creating thread %p\n", *newthread);
 	initialize_thread(*newthread, 0);
 	makecontext((*newthread)->context, (void (*)(void))thread_handler, 2, func, funcarg);
 
 	// Add thread at the end of the list
 	TAILQ_INSERT_TAIL(&runq, *newthread, next_runq);
 	return 0;
-}
-
-thread_t get_next_thread()
-{
-	thread_t current_thread = thread_self();
-	if (current_thread->previous_thread != NULL)
-	{
-		// Run waiting thread next
-		TAILQ_REMOVE(&sleepq, current_thread->previous_thread, next_sleepq);
-		return current_thread->previous_thread;
-	}
-
-	if (TAILQ_EMPTY(&runq)) return T_MAIN;
-
-	thread_t next_thread = TAILQ_FIRST(&runq);
-
-	TAILQ_REMOVE(&runq, next_thread, next_runq);
-	return next_thread;
-}
-
-void set_next_thread(thread_t next_thread)
-{
-	thread_t current_thread = thread_self();
-
-	if (current_thread != next_thread)
-	{
-		TAILQ_REMOVE(&runq, next_thread, next_runq);
-		if (current_thread->status != TERMINATED)
-		{
-			current_thread->status = READY;
-			TAILQ_INSERT_TAIL(&runq, current_thread, next_runq);
-		}
-		set_running_thread(next_thread);
-		swapcontext(current_thread->context, next_thread->context);
-	}
 }
 
 /* passer la main à un autre thread.
@@ -189,20 +190,14 @@ int thread_join(thread_t thread, void** retval)
 	thread_t to_wait = thread;
 	thread_t waiting_thread = thread_self();
 
-	// Check if to_wait is in the sleepq
-	thread_t n1 = TAILQ_FIRST(&sleepq), n2;
-	while (n1 != NULL)
-	{
-		n2 = TAILQ_NEXT(n1, next_sleepq);
-		if (n1 == to_wait) return -1;
-		n1 = n2;
-	}
+    if (to_wait->is_in_sleepq) return -1;
 
 	if (to_wait->status == WAITING || to_wait == waiting_thread) return -1;
 
 	if (to_wait->status != TERMINATED)
 	{
 		waiting_thread->status = WAITING;
+        waiting_thread->is_in_sleepq = 1;
 		TAILQ_INSERT_TAIL(&sleepq, waiting_thread, next_sleepq);
 		// Current thread waits for thread to wait to terminate
 		while (to_wait->status != TERMINATED)
@@ -270,13 +265,19 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 
 	if(mutex->owner == NULL){
 		mutex->owner = thread_self();
-		return 0;
-	} else {
-		thread_t t = thread_self();
-		t->status = WAITING;
-		TAILQ_INSERT_TAIL(&lockq, t, next_lockq);
-		set_next_thread(mutex->owner);
-		return 0;
+		return 1;
+	}
+	// thread_t current = thread_self();
+	// curent->waited_lock = mutex->mutex_index;
+	thread_t owner = mutex->owner;
+	while (owner->status != TERMINATED)
+	{
+		thread_t waiting = thread_self();
+		waiting->status = WAITING;
+        waiting->is_in_sleepq = 1;
+		TAILQ_INSERT_TAIL(&sleepq, waiting, next_sleepq);
+		owner->previous_thread = waiting;
+		set_next_thread(owner);
 	}
 }
 
