@@ -106,10 +106,10 @@ repo_graph:
 
 save_graphs:
 	for file_1 in $(THREADONLY) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_1 1000 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_1 10000 ; \
 	done
 	for file_2 in $(THREADANDYIELD) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_2 1000 10 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_2 10000 10 ; \
 	done
 
 delete_o_bin:
