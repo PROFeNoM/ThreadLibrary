@@ -15,6 +15,7 @@
 TAILQ_HEAD(, thread_struct) runq;
 TAILQ_HEAD(, thread_struct) sleepq;
 TAILQ_HEAD(, thread_struct) lockq;
+TAILQ_HEAD(, priority_t) priorityq;
 thread_t T_RUNNING = NULL;
 thread_t T_MAIN = NULL;
 
@@ -56,6 +57,9 @@ void initialize_thread(thread_t thread, int is_main_thread)
 	thread->status = READY;
 	thread->previous_thread = NULL;
     thread->is_in_sleepq = 0;
+	thread->is_in_lockq = 0;
+	add_thread_to_default_priorityq(thread);
+	thread->prioq_head = default_priority_queue;
 }
 
 void free_thread(thread_t thread_to_free)
@@ -75,6 +79,7 @@ __attribute__((constructor)) void initialize_runq()
 	TAILQ_INIT(&runq);
 	TAILQ_INIT(&sleepq);
 	TAILQ_INIT(&lockq);
+	init_priorityq();
 
 	thread_t main_thread = malloc(sizeof(struct thread_struct));
 	initialize_thread(main_thread, 1);
@@ -111,6 +116,7 @@ __attribute__((destructor)) void destroy_runq()
 	free(T_MAIN->context);
 	free(T_MAIN);
 	T_MAIN = NULL;
+	free_priorityq();
 }
 
 /* recuperer l'identifiant du thread courant.
@@ -133,9 +139,12 @@ thread_t get_next_thread()
 
     if (TAILQ_EMPTY(&runq)) return T_MAIN;
 
+	thread_t next_thread = get_highest_priority_thread();
+	/*
     thread_t next_thread = TAILQ_FIRST(&runq);
 
     TAILQ_REMOVE(&runq, next_thread, next_runq);
+    */
     return next_thread;
 }
 
@@ -151,6 +160,7 @@ void set_next_thread(thread_t next_thread)
         {
             current_thread->status = READY;
             TAILQ_INSERT_TAIL(&runq, current_thread, next_runq);
+			//increase_thread_priority(current_thread);
         }
         set_running_thread(next_thread);
         swapcontext(current_thread->context, next_thread->context);
@@ -190,6 +200,8 @@ int thread_join(thread_t thread, void** retval)
 {
 	thread_t to_wait = thread;
 	thread_t waiting_thread = thread_self();
+
+	increase_thread_priority(waiting_thread);
 
     if (to_wait->is_in_sleepq) return -1;
 
@@ -231,7 +243,8 @@ void thread_exit(void* retval)
 	thread_t current_thread = thread_self();
 	current_thread->retval = retval;
 	current_thread->status = TERMINATED;
-
+	//printf("[EXIT] Removing thread %p from priority queue %d\n", current_thread, current_thread->prioq_head->priority);
+	TAILQ_REMOVE(&current_thread->prioq_head->threads, current_thread, next_prioq);
 	if (TAILQ_EMPTY(&runq))
 	{
 		if (T_MAIN == T_RUNNING) return;
@@ -303,4 +316,103 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 	}
 
 	return 1;
+}
+
+struct priority_t* default_priority_queue = NULL;
+
+void init_priorityq()
+{
+	TAILQ_INIT(&priorityq);
+	for (int i = HIGHEST_PRIOTITY; i < LOWEST_PRIORITY; i++)
+	{
+		struct priority_t* entry = malloc(sizeof(struct priority_t));
+		entry->priority = i;
+		TAILQ_INIT(&entry->threads);
+		TAILQ_INSERT_TAIL(&priorityq, entry, next_priorityq);
+		if (i == DEFAULT_PRIORITY) default_priority_queue = entry;
+	}
+}
+
+void free_priorityq()
+{
+	struct priority_t* entry = TAILQ_FIRST(&priorityq), * next;
+	while (entry != NULL)
+	{
+		next = TAILQ_NEXT(entry, next_priorityq);
+		free(entry);
+		entry = next;
+	}
+}
+
+void add_thread_to_default_priorityq(thread_t thread)
+{
+	TAILQ_INSERT_TAIL(&default_priority_queue->threads, thread, next_prioq);
+	//add_thread_to_priorityq(thread, DEFAULT_PRIORITY);
+	//printf("Adding thread %p to default priority queue %d\n", thread, default_priority_queue->priority);
+}
+
+struct priority_t* add_thread_to_priorityq(thread_t thread, int priority)
+{
+	struct priority_t* entry = TAILQ_FIRST(&priorityq);
+	while (entry != NULL)
+	{
+		if (entry->priority == priority)
+		{
+			TAILQ_INSERT_TAIL(&entry->threads, thread, next_prioq);
+			//printf("Adding thread %p to priority queue %d\n", thread, entry->priority);
+			return entry;
+		}
+		entry = TAILQ_NEXT(entry, next_priorityq);
+	}
+	return NULL;
+}
+
+void lower_thread_priority(thread_t thread)
+{
+	struct priority_t* current_priority_queue = thread->prioq_head;
+	int current_priority = current_priority_queue->priority;
+	//printf("Lowering thread priority of %p from %d to %d\n", thread, current_priority, current_priority - 1);
+	if (current_priority == LOWEST_PRIORITY) return;
+
+	TAILQ_REMOVE(&current_priority_queue->threads, thread, next_prioq);
+	//printf("Removing thread %p from priority queue %d\n", thread, current_priority);
+	thread->prioq_head = add_thread_to_priorityq(thread, current_priority + 1);
+}
+
+void increase_thread_priority(thread_t thread)
+{
+	struct priority_t* current_priority_queue = thread->prioq_head;
+	int current_priority = current_priority_queue->priority;
+	//printf("Increasing thread priority of %p from %d to %d\n", thread, current_priority, current_priority - 1);
+	if (current_priority == HIGHEST_PRIOTITY) return;
+
+	TAILQ_REMOVE(&current_priority_queue->threads, thread, next_prioq);
+	//printf("Removing thread %p from priority queue %d\n", thread, current_priority);
+	thread->prioq_head = add_thread_to_priorityq(thread, current_priority - 1);
+}
+
+thread_t get_highest_priority_thread()
+{
+	struct priority_t* queue = TAILQ_FIRST(&priorityq);
+	while (queue != NULL)
+	{
+		//printf("Processing priority queue %d\n", queue->priority);
+		// Remove the first thread from the queue that has his status READY
+		thread_t thread = TAILQ_FIRST(&queue->threads);
+		while (thread != NULL)
+		{
+			//printf("Status of thread %p is %d, priority %d\n", thread, thread->status, queue->priority);
+			if (thread->status == READY)
+			{
+				//printf("Found thread %p with priority %d\n", thread, queue->priority);
+				//TAILQ_REMOVE(&queue->threads, thread, next_prioq);
+				return thread;
+			}
+			thread = TAILQ_NEXT(thread, next_prioq);
+		}
+
+		queue = TAILQ_NEXT(queue, next_priorityq);
+	}
+	//printf("Returning NULL\n");
+	return NULL;
 }

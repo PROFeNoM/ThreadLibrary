@@ -44,7 +44,8 @@ struct thread_struct
     int is_in_sleepq; // Faster lookup
 	int is_in_lockq;
 
-	// int waited_lock; // -1 if no lock waited
+	TAILQ_ENTRY(thread_struct) next_prioq;
+	struct priority_t* prioq_head;
 };
 
 
@@ -83,6 +84,34 @@ int thread_mutex_init(thread_mutex_t *mutex);
 int thread_mutex_destroy(thread_mutex_t *mutex);
 int thread_mutex_lock(thread_mutex_t *mutex);
 int thread_mutex_unlock(thread_mutex_t *mutex);
+
+
+#define DEFAULT_PRIORITY 0
+#define HIGHEST_PRIOTITY -20
+#define LOWEST_PRIORITY 19
+
+extern struct priority_t* default_priority_queue;
+
+struct priority_t {
+	int priority;
+
+	TAILQ_ENTRY(priority_t) next_priorityq;
+	TAILQ_HEAD(, thread_struct) threads;
+};
+
+void init_priorityq();
+
+void free_priorityq();
+
+struct priority_t* add_thread_to_priorityq(thread_t thread, int priority);
+
+void add_thread_to_default_priorityq(thread_t thread); // For faster insertion
+
+void lower_thread_priority(thread_t thread);
+
+void increase_thread_priority(thread_t thread);
+
+thread_t get_highest_priority_thread();
 
 #else /* USE_PTHREAD */
 
