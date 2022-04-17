@@ -125,9 +125,11 @@ thread_t get_next_thread()
     if (current_thread->previous_thread != NULL)
     {
         // Run waiting thread next
-        current_thread->previous_thread->is_in_sleepq = 0;
-        TAILQ_REMOVE(&sleepq, current_thread->previous_thread, next_sleepq);
-        return current_thread->previous_thread;
+		thread_t previous_thread = current_thread->previous_thread;
+        previous_thread->is_in_sleepq = 0;
+        if (previous_thread->status == WAITING) TAILQ_REMOVE(&sleepq, previous_thread, next_sleepq);
+		else if (previous_thread->status == LOCKED) TAILQ_REMOVE(&lockq, previous_thread, next_lockq);
+        return previous_thread;
     }
 
     if (TAILQ_EMPTY(&runq)) return T_MAIN;
@@ -262,49 +264,44 @@ int thread_mutex_destroy(thread_mutex_t* mutex)
 
 int thread_mutex_lock(thread_mutex_t* mutex)
 {
-	if(mutex->is_valid == 0){
-		return -1;
-	}
+	if (mutex->is_valid == 0) return -1;
 
-	if(mutex->owner == NULL){
-		mutex->owner = thread_self();
-		return 1;
-	}
-	// thread_t current = thread_self();
-	// curent->waited_lock = mutex->mutex_index;
-	thread_t owner = mutex->owner;
-	while (owner->status != TERMINATED)
+	thread_t current_thread = thread_self();
+	if (mutex->owner == current_thread) return 0;
+
+	if (mutex->owner == NULL)
 	{
-		thread_t waiting = thread_self();
-		waiting->status = WAITING;
-        waiting->is_in_sleepq = 1;
-		TAILQ_INSERT_TAIL(&sleepq, waiting, next_sleepq);
-		owner->previous_thread = waiting;
-		set_next_thread(owner);
+		mutex->owner = current_thread;
+		return 0;
 	}
 
-	return 1;
+	current_thread->status = WAITING;
+	TAILQ_INSERT_TAIL(&sleepq, current_thread, next_sleepq);
+
+	while (mutex->owner != NULL)
+	{
+		set_next_thread(mutex->owner);
+	}
+
+	mutex->owner = current_thread;
+	return 0;
 }
 
 int thread_mutex_unlock(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
 
-	thread_t n1 = TAILQ_FIRST(&lockq), n2;
-	while (n1 != NULL)
-	{
-		n2 = TAILQ_NEXT(n1, next_lockq);
-		if(n1->waited_lock == mutex){
-			thread_t t = thread_self();
-			t->status = WAITING;
-			TAILQ_INSERT_TAIL(&sleepq, t, next_sleepq);
-
-			mutex->owner = n1;			
-			set_next_thread(mutex->owner);
-			return 0;
-		}
-		n1 = n2;
+	if(mutex->is_valid == 0){
+		return -1;
 	}
 
-	return 0;
+	if(!TAILQ_EMPTY(&lockq)){
+		thread_t next_locked = TAILQ_FIRST(&lockq);
+		next_locked->is_in_lockq = 0;
+		TAILQ_REMOVE(&lockq, next_locked, next_lockq);
+		next_locked->status = READY;
+		TAILQ_INSERT_TAIL(&runq, next_locked, next_runq);
+	}
+
+	return 1;
 }

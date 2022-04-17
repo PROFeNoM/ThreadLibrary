@@ -11,7 +11,7 @@
 
 enum STATUS
 {
-	WAITING, TERMINATED, RUNNING, READY
+	WAITING, TERMINATED, RUNNING, READY, LOCKED
 };
 
 /* identifiant de thread
@@ -42,6 +42,7 @@ struct thread_struct
 
 	void* retval;
     int is_in_sleepq; // Faster lookup
+	int is_in_lockq;
 
 	// int waited_lock; // -1 if no lock waited
 };
