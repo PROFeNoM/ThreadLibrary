@@ -234,7 +234,10 @@ void thread_exit(void* retval)
 	if (TAILQ_EMPTY(&runq))
 	{
 		if (T_MAIN == T_RUNNING) return;
-		else setcontext(T_MAIN->context);
+		else {
+			T_MAIN->status = RUNNING;
+			setcontext(T_MAIN->context);
+		}
 	}
 	else
 		thread_yield();
@@ -279,6 +282,8 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 		owner->previous_thread = waiting;
 		set_next_thread(owner);
 	}
+
+	return 1;
 }
 
 int thread_mutex_unlock(thread_mutex_t* mutex)
