@@ -127,8 +127,7 @@ thread_t get_next_thread()
         // Run waiting thread next
 		thread_t previous_thread = current_thread->previous_thread;
         previous_thread->is_in_sleepq = 0;
-        if (previous_thread->status == WAITING) TAILQ_REMOVE(&sleepq, previous_thread, next_sleepq);
-		else if (previous_thread->status == LOCKED) TAILQ_REMOVE(&lockq, previous_thread, next_lockq);
+        TAILQ_REMOVE(&sleepq, previous_thread, next_sleepq);
         return previous_thread;
     }
 
