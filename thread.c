@@ -56,12 +56,14 @@ void initialize_thread(thread_t thread, int is_main_thread)
 	thread->status = READY;
 	thread->previous_thread = NULL;
     thread->is_in_sleepq = 0;
+    thread->is_in_lockq = 0;
 }
 
 void free_thread(thread_t thread_to_free)
 {
 	if (thread_to_free != NULL && thread_to_free != T_MAIN)
 	{
+        //printf("Freeing thread %p\n", thread_to_free);
 		VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
 		free(thread_to_free->context->uc_stack.ss_sp);
 		free(thread_to_free->context);
@@ -147,7 +149,7 @@ void set_next_thread(thread_t next_thread)
     {
         //printf("Setting next theead to %p\n", next_thread);
         TAILQ_REMOVE(&runq, next_thread, next_runq);
-        if (current_thread->status != TERMINATED)
+        if (current_thread->status != TERMINATED && current_thread->status != LOCKED)
         {
             current_thread->status = READY;
             TAILQ_INSERT_TAIL(&runq, current_thread, next_runq);
@@ -274,15 +276,24 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 		return 0;
 	}
 
-	current_thread->status = WAITING;
-	TAILQ_INSERT_TAIL(&sleepq, current_thread, next_sleepq);
+    // If the mutex is locked, the current thread goes to sleep
+	current_thread->status = LOCKED;
+    current_thread->is_in_lockq = 1;
+	TAILQ_INSERT_TAIL(&lockq, current_thread, next_lockq);
 
+    // Current thread waits for mutex to be unlocked
 	while (mutex->owner != NULL)
 	{
 		set_next_thread(mutex->owner);
 	}
 
+    // Current thread is now the owner
 	mutex->owner = current_thread;
+
+    // Remove the current thread from the lockq
+    current_thread->is_in_lockq = 0;
+    TAILQ_REMOVE(&lockq, current_thread, next_lockq);
+
 	return 0;
 }
 
@@ -290,17 +301,5 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
 
-	if(mutex->is_valid == 0){
-		return -1;
-	}
-
-	if(!TAILQ_EMPTY(&lockq)){
-		thread_t next_locked = TAILQ_FIRST(&lockq);
-		next_locked->is_in_lockq = 0;
-		TAILQ_REMOVE(&lockq, next_locked, next_lockq);
-		next_locked->status = READY;
-		TAILQ_INSERT_TAIL(&runq, next_locked, next_runq);
-	}
-
-	return 1;
+    return 0;
 }
