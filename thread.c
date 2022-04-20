@@ -270,6 +270,8 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 	thread_t current_thread = thread_self();
 	if (mutex->owner == current_thread) return 0;
 
+
+    // The current thread is not locked, so it can lock it
 	if (mutex->owner == NULL)
 	{
 		mutex->owner = current_thread;
@@ -278,21 +280,11 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 
     // If the mutex is locked, the current thread goes to sleep
 	current_thread->status = LOCKED;
-    current_thread->is_in_lockq = 1;
+    current_thread->is_in_lockq = 1;  // TODO: To remove
 	TAILQ_INSERT_TAIL(&lockq, current_thread, next_lockq);
 
     // Current thread waits for mutex to be unlocked
-	while (mutex->owner != NULL)
-	{
-		set_next_thread(mutex->owner);
-	}
-
-    // Current thread is now the owner
-	mutex->owner = current_thread;
-
-    // Remove the current thread from the lockq
-    current_thread->is_in_lockq = 0;
-    TAILQ_REMOVE(&lockq, current_thread, next_lockq);
+	set_next_thread(mutex->owner);
 
 	return 0;
 }
@@ -300,6 +292,15 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 int thread_mutex_unlock(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
+
+    // Wake up the thread that is waiting for the mutex
+    if (!TAILQ_EMPTY(&lockq))
+    {
+        thread_t waiting_thread = TAILQ_FIRST(&lockq);
+        waiting_thread->status = RUNNING;
+        waiting_thread->is_in_lockq = 0;
+        TAILQ_REMOVE(&lockq, waiting_thread, next_lockq);
+    }
 
     return 0;
 }
