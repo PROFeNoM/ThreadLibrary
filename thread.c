@@ -193,9 +193,18 @@ int thread_join(thread_t thread, void** retval)
 	thread_t to_wait = thread;
 	thread_t waiting_thread = thread_self();
 
-    if (to_wait->is_in_sleepq) return -1;
-
-	if (to_wait->status == WAITING || to_wait == waiting_thread) return -1;
+    // TODO: Add some sort of compilation rule
+    /*
+    // Check if there would be a deadlock
+    if (!to_wait || waiting_thread == to_wait || to_wait->status == WAITING) return -1;
+    thread_t t1 = waiting_thread, t2;
+    while (t1 != NULL)
+    {
+        t2 = t1->previous_thread;
+        if (t2 == to_wait) return -1;
+        t1 = t2;
+    }
+     */
 
 	if (to_wait->status != TERMINATED)
 	{
