@@ -1,9 +1,9 @@
-
 # Import system modules
 import subprocess
 import sys
 import matplotlib.pyplot as plt
 import re
+import progress.bar as Bar
 
 args = sys.argv[1:]
 
@@ -43,14 +43,21 @@ filename1 = args[0]
 filename2 = filename1 + "_c"
 
 nb_threads = int(args[1])
+if nb_threads < 100:
+    print("Cannot have less than 100 threads")
+    raise ValueError()
+
 if len(args) == 3:
     nb_yields = int(args[2])
 step = int(nb_threads/100)
 
+bar = Bar.Bar('Running ' + filename1 + ' vs. ' + filename2, step=step, max=nb_threads / step, suffix='%(percent).1f%% - %(eta)ds')
 for i in range(1, nb_threads, step):
+    #print(f'Running {filename1} & {filename2} ==> {i}.' + '\r')
     time1.append(getTime(filename1))
     time2.append(getTime(filename2))
-
+    bar.next()
+bar.finish()
 
 RangeThreads = range(1, nb_threads, step)
 
