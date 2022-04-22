@@ -20,11 +20,11 @@ def parser(result):
 
     return (0, "s")
 
-def getTime(fileName):
+def getTime(fileName, threads_used):
     if len(args) == 3:
-        result = subprocess.run(["./" + fileName, str(nb_threads), str(nb_yields)], stdout = subprocess.PIPE)
+        result = subprocess.run(["./" + fileName, str(threads_used), str(nb_yields)], stdout = subprocess.PIPE)
     elif len(args) == 2:
-        result = subprocess.run(["./" + fileName, str(nb_threads)], stdout = subprocess.PIPE)
+        result = subprocess.run(["./" + fileName, str(threads_used)], stdout = subprocess.PIPE)
 
 
     (time, unit) = parser(result)
@@ -54,8 +54,8 @@ step = int(nb_threads/100)
 bar = Bar.Bar('Running ' + filename1 + ' vs. ' + filename2, step=step, max=nb_threads / step, suffix='%(percent).1f%% - %(eta)ds')
 for i in range(1, nb_threads, step):
     #print(f'Running {filename1} & {filename2} ==> {i}.' + '\r')
-    time1.append(getTime(filename1))
-    time2.append(getTime(filename2))
+    time1.append(getTime(filename1, i))
+    time2.append(getTime(filename2, i))
     bar.next()
 bar.finish()
 
