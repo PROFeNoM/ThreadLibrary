@@ -254,6 +254,7 @@ int thread_mutex_init(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
 	mutex->is_valid = 1;
+    TAILQ_INIT(&mutex->waiting_threads);
 	return 0;
 }
 
@@ -281,7 +282,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 
     // If the mutex is locked, the current thread goes to sleep
 	current_thread->status = LOCKED;
-	TAILQ_INSERT_TAIL(&lockq, current_thread, next_lockq);
+    TAILQ_INSERT_TAIL(&mutex->waiting_threads, current_thread, next_mutexq);
 
     // Current thread waits for mutex to be unlocked
 	set_next_thread(mutex->owner);
@@ -294,11 +295,11 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 	mutex->owner = NULL;
 
     // Wake up the thread that is waiting for the mutex
-    if (!TAILQ_EMPTY(&lockq))
+    if (!TAILQ_EMPTY(&mutex->waiting_threads))
     {
-        thread_t waiting_thread = TAILQ_FIRST(&lockq);
+        thread_t waiting_thread = TAILQ_FIRST(&mutex->waiting_threads);
         waiting_thread->status = RUNNING;
-        TAILQ_REMOVE(&lockq, waiting_thread, next_lockq);
+        TAILQ_REMOVE(&mutex->waiting_threads, waiting_thread, next_mutexq);
     }
 
     return 0;

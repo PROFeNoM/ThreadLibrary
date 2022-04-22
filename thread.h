@@ -25,12 +25,14 @@ typedef struct thread_struct * thread_t;
 typedef struct thread_mutex{ // Personnal structure
     thread_t owner; // NULL if no owner
 	int is_valid; // Assert if the given lock is valid
+    TAILQ_HEAD(, thread_struct) waiting_threads; // List of threads waiting for the lock
 } thread_mutex_t;
 
 struct thread_struct
 {
 	TAILQ_ENTRY(thread_struct) next_runq;
 	TAILQ_ENTRY(thread_struct) next_lockq;
+    TAILQ_ENTRY(thread_struct) next_mutexq;
 
 	ucontext_t* context;
 	thread_t previous_thread;
