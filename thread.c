@@ -13,7 +13,6 @@
 #endif
 
 TAILQ_HEAD(, thread_struct) runq;
-TAILQ_HEAD(, thread_struct) sleepq;
 TAILQ_HEAD(, thread_struct) lockq;
 thread_t T_RUNNING = NULL;
 thread_t T_MAIN = NULL;
@@ -55,8 +54,6 @@ void initialize_thread(thread_t thread, int is_main_thread)
 	initialize_context(thread, !is_main_thread);
 	thread->status = READY;
 	thread->previous_thread = NULL;
-    thread->is_in_sleepq = 0;
-    thread->is_in_lockq = 0;
 }
 
 void free_thread(thread_t thread_to_free)
@@ -75,7 +72,6 @@ void free_thread(thread_t thread_to_free)
 __attribute__((constructor)) void initialize_runq()
 {
 	TAILQ_INIT(&runq);
-	TAILQ_INIT(&sleepq);
 	TAILQ_INIT(&lockq);
 
 	thread_t main_thread = malloc(sizeof(struct thread_struct));
@@ -128,8 +124,6 @@ thread_t get_next_thread()
     {
         // Run waiting thread next
 		thread_t previous_thread = current_thread->previous_thread;
-        previous_thread->is_in_sleepq = 0;
-        TAILQ_REMOVE(&sleepq, previous_thread, next_sleepq);
         return previous_thread;
     }
 
@@ -193,15 +187,22 @@ int thread_join(thread_t thread, void** retval)
 	thread_t to_wait = thread;
 	thread_t waiting_thread = thread_self();
 
-    if (to_wait->is_in_sleepq) return -1;
-
-	if (to_wait->status == WAITING || to_wait == waiting_thread) return -1;
+    // TODO: Add some sort of compilation rule
+    /*
+    // Check if there would be a deadlock
+    if (!to_wait || waiting_thread == to_wait || to_wait->status == WAITING) return -1;
+    thread_t t1 = waiting_thread, t2;
+    while (t1 != NULL)
+    {
+        t2 = t1->previous_thread;
+        if (t2 == to_wait) return -1;
+        t1 = t2;
+    }
+     */
 
 	if (to_wait->status != TERMINATED)
 	{
 		waiting_thread->status = WAITING;
-        waiting_thread->is_in_sleepq = 1;
-		TAILQ_INSERT_TAIL(&sleepq, waiting_thread, next_sleepq);
 		// Current thread waits for thread to wait to terminate
 		while (to_wait->status != TERMINATED)
 		{
@@ -280,7 +281,6 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 
     // If the mutex is locked, the current thread goes to sleep
 	current_thread->status = LOCKED;
-    current_thread->is_in_lockq = 1;  // TODO: To remove
 	TAILQ_INSERT_TAIL(&lockq, current_thread, next_lockq);
 
     // Current thread waits for mutex to be unlocked
@@ -298,7 +298,6 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
     {
         thread_t waiting_thread = TAILQ_FIRST(&lockq);
         waiting_thread->status = RUNNING;
-        waiting_thread->is_in_lockq = 0;
         TAILQ_REMOVE(&lockq, waiting_thread, next_lockq);
     }
 
