@@ -6,21 +6,20 @@
 #include "thread.h"
 #include "utils.h"
 
-#ifdef DEBUG
-#define DEBUG_PRINT(...) printf(__VA_ARGS__)
-#else
+//#define DEBUG_PRINT(...) printf(__VA_ARGS__)
 #define DEBUG_PRINT(...)
-#endif
 
-TAILQ_HEAD(, thread_struct) runq;
-TAILQ_HEAD(, thread_struct) lockq;
-thread_t T_RUNNING = NULL;
-thread_t T_MAIN = NULL;
+TAILQ_HEAD(, thread_struct)
+runq;
+TAILQ_HEAD(, thread_struct)
+lockq;
+thread_t _running_thread = NULL;
+thread_t _main_thread = NULL;
 
 void set_running_thread(thread_t thread)
 {
 	thread->status = RUNNING;
-	T_RUNNING = thread;
+	_running_thread = thread;
 }
 
 void* thread_handler(void* (* func)(void*), void* funcarg)
@@ -58,15 +57,15 @@ void initialize_thread(thread_t thread, int is_main_thread)
 
 void free_thread(thread_t thread_to_free)
 {
-	if (thread_to_free != NULL && thread_to_free != T_MAIN)
+	if (thread_to_free != _main_thread)
 	{
-        //printf("Freeing thread %p\n", thread_to_free);
+		DEBUG_PRINT("Freeing thread %p\n", thread_to_free);
 		VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
 		free(thread_to_free->context->uc_stack.ss_sp);
 		free(thread_to_free->context);
 		free(thread_to_free);
-		thread_to_free = NULL;
 	}
+
 }
 
 __attribute__((constructor)) void initialize_runq()
@@ -77,20 +76,21 @@ __attribute__((constructor)) void initialize_runq()
 	thread_t main_thread = malloc(sizeof(struct thread_struct));
 	initialize_thread(main_thread, 1);
 	set_running_thread(main_thread);
-	T_RUNNING = T_MAIN = main_thread;
+	_running_thread = _main_thread = main_thread;
+	DEBUG_PRINT("Main thread created %p\n", _main_thread);
 }
 
 void print_queue()
 {
-	printf("MAIN: %p\n", T_MAIN);
+	printf("MAIN: %p\n", _main_thread);
 	/*thread_t thread;
 	TAILQ_FOREACH(thread, &runq, field) printf("%s%p%s -> ",
-			thread == T_RUNNING ? "[" : "", thread, thread == T_RUNNING ? "]" : "");*/
+			thread == _running_thread ? "[" : "", thread, thread == _running_thread ? "]" : "");*/
 	thread_t n1 = TAILQ_FIRST(&runq), n2;
 	while (n1 != NULL)
 	{
 		n2 = TAILQ_NEXT(n1, next_runq);
-		printf("%s%p%s -> ", n1 == T_RUNNING ? "[" : "", n1, n1 == T_RUNNING ? "]" : "");
+		printf("%s%p%s -> ", n1 == _running_thread ? "[" : "", n1, n1 == _running_thread ? "]" : "");
 		n1 = n2;
 	}
 	printf("\n");
@@ -105,53 +105,21 @@ __attribute__((destructor)) void destroy_runq()
 		free_thread(n1);
 		n1 = n2;
 	}
-	if (T_MAIN != T_RUNNING) free_thread(T_RUNNING);
-	free(T_MAIN->context);
-	free(T_MAIN);
-	T_MAIN = NULL;
+	if (_main_thread != _running_thread) free_thread(_running_thread);
+	else
+		DEBUG_PRINT("Main thread %p is running\n", _main_thread);
+	free(_main_thread->context);
+	free(_main_thread);
+
 }
 
 /* recuperer l'identifiant du thread courant.
  */
 thread_t thread_self(void)
 {
-	return T_RUNNING;
-}
-thread_t get_next_thread()
-{
-    thread_t current_thread = thread_self();
-    if (current_thread->previous_thread != NULL)
-    {
-        // Run waiting thread next
-		thread_t previous_thread = current_thread->previous_thread;
-        return previous_thread;
-    }
-
-    if (TAILQ_EMPTY(&runq)) return T_MAIN;
-
-    thread_t next_thread = TAILQ_FIRST(&runq);
-
-    TAILQ_REMOVE(&runq, next_thread, next_runq);
-    return next_thread;
+	return _running_thread;
 }
 
-void set_next_thread(thread_t next_thread)
-{
-    thread_t current_thread = thread_self();
-
-    if (current_thread != next_thread)
-    {
-        //printf("Setting next theead to %p\n", next_thread);
-        TAILQ_REMOVE(&runq, next_thread, next_runq);
-        if (current_thread->status != TERMINATED && current_thread->status != LOCKED)
-        {
-            current_thread->status = READY;
-            TAILQ_INSERT_TAIL(&runq, current_thread, next_runq);
-        }
-        set_running_thread(next_thread);
-        swapcontext(current_thread->context, next_thread->context);
-    }
-}
 /* creer un nouveau thread qui va exécuter la fonction func avec l'argument funcarg.
  * renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
@@ -159,7 +127,7 @@ int thread_create(thread_t* newthread, void* (* func)(void*), void* funcarg)
 {
 	// Create a new thread
 	(*newthread) = malloc(sizeof(struct thread_struct));
-    //printf("Creating thread %p\n", *newthread);
+	DEBUG_PRINT("Creating thread %p\n", *newthread);
 	initialize_thread(*newthread, 0);
 	makecontext((*newthread)->context, (void (*)(void))thread_handler, 2, func, funcarg);
 
@@ -172,10 +140,22 @@ int thread_create(thread_t* newthread, void* (* func)(void*), void* funcarg)
  */
 int thread_yield(void)
 {
-	// Get and Swap both threads
-	set_next_thread(get_next_thread());
+	DEBUG_PRINT("Yielding from thread %p\n", _running_thread);
+	thread_t yielding_thread = _running_thread;
+	thread_t next_thread = TAILQ_FIRST(&runq);
 
-	return 0;
+	if (next_thread == NULL)
+	{
+		DEBUG_PRINT("No thread to yield to\n");
+		return 0;
+	}
+
+	DEBUG_PRINT("Thread %p yielding to thread %p\n", yielding_thread, next_thread);
+	TAILQ_INSERT_TAIL(&runq, yielding_thread, next_runq);
+	set_running_thread(next_thread);
+	TAILQ_REMOVE(&runq, next_thread, next_runq);
+
+	return swapcontext(yielding_thread->context, next_thread->context);
 }
 
 /* attendre la fin d'exécution d'un thread.
@@ -184,38 +164,38 @@ int thread_yield(void)
  */
 int thread_join(thread_t thread, void** retval)
 {
+	DEBUG_PRINT("Joining thread %p\n", thread);
+	thread_t waiting_thread = _running_thread;
+
 	thread_t to_wait = thread;
-	thread_t waiting_thread = thread_self();
 
-    // TODO: Add some sort of compilation rule
-    /*
-    // Check if there would be a deadlock
-    if (!to_wait || waiting_thread == to_wait || to_wait->status == WAITING) return -1;
-    thread_t t1 = waiting_thread, t2;
-    while (t1 != NULL)
-    {
-        t2 = t1->previous_thread;
-        if (t2 == to_wait) return -1;
-        t1 = t2;
-    }
-     */
-
-	if (to_wait->status != TERMINATED)
+	if (to_wait->previous_thread != NULL && to_wait->previous_thread != waiting_thread)
 	{
-		waiting_thread->status = WAITING;
-		// Current thread waits for thread to wait to terminate
-		while (to_wait->status != TERMINATED)
-		{
-			to_wait->previous_thread = waiting_thread;
-			set_next_thread(to_wait);
-		}
+		return -1;
 	}
 
-	// save retval's addr
-	if (retval != NULL) *retval = to_wait->retval;
+	if (to_wait->status == TERMINATED)
+	{
+		if (retval != NULL)
+			*retval = to_wait->retval;
+		DEBUG_PRINT("This thread has already existed: freeing thread %p\n", to_wait);
+		free_thread(to_wait);
+		return 0;
+	}
 
-	// thread is done, free and leave
-	if (to_wait != T_MAIN) free_thread(to_wait);
+	DEBUG_PRINT("Thread %p waiting for thread %p\n", waiting_thread, to_wait);
+	to_wait->previous_thread = waiting_thread;
+
+	set_running_thread(to_wait);
+	TAILQ_REMOVE(&runq, to_wait, next_runq);
+
+	swapcontext(waiting_thread->context, to_wait->context);
+
+	if (retval != NULL)
+		*retval = to_wait->retval;
+
+	DEBUG_PRINT("Thread %p has been joined, back to %p\n", to_wait, _running_thread);
+	free_thread(to_wait);
 
 	return 0;
 }
@@ -230,23 +210,48 @@ int thread_join(thread_t thread, void** retval)
  */
 void thread_exit(void* retval)
 {
-	// current thread to terminate
-	thread_t current_thread = thread_self();
-	current_thread->retval = retval;
-	current_thread->status = TERMINATED;
+	DEBUG_PRINT("Exiting thread %p\n", _running_thread);
+	thread_t exiting_thread = _running_thread;
 
-	if (TAILQ_EMPTY(&runq))
+	exiting_thread->retval = retval;
+	exiting_thread->status = TERMINATED;
+
+	if (exiting_thread->previous_thread != NULL)
 	{
-		if (T_MAIN == T_RUNNING) return;
-		else {
-			T_MAIN->status = RUNNING;
-			setcontext(T_MAIN->context);
-		}
+		DEBUG_PRINT("Thread %p is waiting for thread %p\n", exiting_thread->previous_thread, exiting_thread);
+		set_running_thread(exiting_thread->previous_thread);
+		if (exiting_thread == _main_thread) swapcontext(exiting_thread->context, exiting_thread->previous_thread->context);
+		else setcontext(exiting_thread->previous_thread->context);
+
 	}
 	else
-		thread_yield();
-
-	exit(0);
+	{
+		DEBUG_PRINT("Nobody is waiting for thread %p\n", exiting_thread);
+		thread_t next_thread = TAILQ_FIRST(&runq);
+		if (next_thread != NULL)
+		{
+			DEBUG_PRINT("Thread %p is the next thread to run\n", next_thread);
+			set_running_thread(next_thread);
+			TAILQ_REMOVE(&runq, next_thread, next_runq);
+			if (exiting_thread == _main_thread) swapcontext(exiting_thread->context, next_thread->context);
+			else setcontext(next_thread->context);
+		}
+		else
+		{
+			DEBUG_PRINT("No thread to run\n");
+			if (exiting_thread == _main_thread)
+			{
+				DEBUG_PRINT("Main thread exiting\n");
+				exit(0);
+			}
+			else
+			{
+				DEBUG_PRINT("Fallback to main thread\n");
+				//set_running_thread(_main_thread);
+				setcontext(_main_thread->context);
+			}
+		}
+	}
 }
 
 // Here just so 61-mutex.c can compile, although it obviously doesn't yield the correct result
@@ -254,7 +259,7 @@ int thread_mutex_init(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
 	mutex->is_valid = 1;
-    TAILQ_INIT(&mutex->waiting_threads);
+	TAILQ_INIT(&mutex->waiting_threads);
 	return 0;
 }
 
@@ -273,19 +278,19 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 	if (mutex->owner == current_thread) return 0;
 
 
-    // The current thread is not locked, so it can lock it
+	// The current thread is not locked, so it can lock it
 	if (mutex->owner == NULL)
 	{
 		mutex->owner = current_thread;
 		return 0;
 	}
 
-    // If the mutex is locked, the current thread goes to sleep
+	// If the mutex is locked, the current thread goes to sleep
 	current_thread->status = LOCKED;
-    TAILQ_INSERT_TAIL(&mutex->waiting_threads, current_thread, next_mutexq);
+	TAILQ_INSERT_TAIL(&mutex->waiting_threads, current_thread, next_mutexq);
 
-    // Current thread waits for mutex to be unlocked
-	set_next_thread(mutex->owner);
+	// Current thread waits for mutex to be unlocked
+	set_running_thread(mutex->owner);
 
 	return 0;
 }
@@ -294,13 +299,13 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
 
-    // Wake up the thread that is waiting for the mutex
-    if (!TAILQ_EMPTY(&mutex->waiting_threads))
-    {
-        thread_t waiting_thread = TAILQ_FIRST(&mutex->waiting_threads);
-        waiting_thread->status = RUNNING;
-        TAILQ_REMOVE(&mutex->waiting_threads, waiting_thread, next_mutexq);
-    }
+	// Wake up the thread that is waiting for the mutex
+	if (!TAILQ_EMPTY(&mutex->waiting_threads))
+	{
+		thread_t waiting_thread = TAILQ_FIRST(&mutex->waiting_threads);
+		waiting_thread->status = RUNNING;
+		TAILQ_REMOVE(&mutex->waiting_threads, waiting_thread, next_mutexq);
+	}
 
-    return 0;
+	return 0;
 }
