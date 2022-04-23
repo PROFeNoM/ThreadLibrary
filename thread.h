@@ -31,8 +31,7 @@ typedef struct thread_mutex{ // Personnal structure
 struct thread_struct
 {
 	TAILQ_ENTRY(thread_struct) next_runq;
-	TAILQ_ENTRY(thread_struct) next_lockq;
-    TAILQ_ENTRY(thread_struct) next_mutexq;
+	TAILQ_ENTRY(thread_struct) next_freeq;
 
 	ucontext_t* context;
 	thread_t previous_thread;
@@ -43,7 +42,7 @@ struct thread_struct
 
 	void* retval;
 
-	// int waited_lock; // -1 if no lock waited
+	int is_in_freeq; // For faster lookups
 };
 
 

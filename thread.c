@@ -9,16 +9,14 @@
 //#define DEBUG_PRINT(...) printf(__VA_ARGS__)
 #define DEBUG_PRINT(...)
 
-TAILQ_HEAD(, thread_struct)
-runq;
-TAILQ_HEAD(, thread_struct)
-lockq;
+TAILQ_HEAD(, thread_struct) runq;
+TAILQ_HEAD(, thread_struct) freeq;
 thread_t _running_thread = NULL;
 thread_t _main_thread = NULL;
 
 void set_running_thread(thread_t thread)
 {
-	DEBUG_PRINT("set_running_thread: %p\n", thread);
+	//DEBUG_PRINT("set_running_thread: %p\n", thread);
 	thread->status = RUNNING;
 	_running_thread = thread;
 }
@@ -54,11 +52,13 @@ void initialize_thread(thread_t thread, int is_main_thread)
 	initialize_context(thread, !is_main_thread);
 	thread->status = READY;
 	thread->previous_thread = NULL;
+	thread->retval = NULL;
+	thread->is_in_freeq = 0;
 }
 
 void free_thread(thread_t thread_to_free)
 {
-	if (thread_to_free != _main_thread)
+	if (thread_to_free && !thread_to_free->is_in_freeq && thread_to_free != _main_thread)
 	{
 		DEBUG_PRINT("Freeing thread %p\n", thread_to_free);
 		VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
@@ -72,7 +72,7 @@ void free_thread(thread_t thread_to_free)
 __attribute__((constructor)) void initialize_runq()
 {
 	TAILQ_INIT(&runq);
-	TAILQ_INIT(&lockq);
+	TAILQ_INIT(&freeq);
 
 	thread_t main_thread = malloc(sizeof(struct thread_struct));
 	initialize_thread(main_thread, 1);
@@ -83,18 +83,18 @@ __attribute__((constructor)) void initialize_runq()
 
 void print_queue()
 {
-	printf("MAIN: %p\n", _main_thread);
+	DEBUG_PRINT("MAIN: %p\n", _main_thread);
 	/*thread_t thread;
-	TAILQ_FOREACH(thread, &runq, field) printf("%s%p%s -> ",
+	TAILQ_FOREACH(thread, &runq, field) DEBUG_PRINT("%s%p%s -> ",
 			thread == _running_thread ? "[" : "", thread, thread == _running_thread ? "]" : "");*/
 	thread_t n1 = TAILQ_FIRST(&runq), n2;
 	while (n1 != NULL)
 	{
 		n2 = TAILQ_NEXT(n1, next_runq);
-		printf("%s%p%s -> ", n1 == _running_thread ? "[" : "", n1, n1 == _running_thread ? "]" : "");
+		DEBUG_PRINT("%s%p%s -> ", n1 == _running_thread ? "[" : "", n1, n1 == _running_thread ? "]" : "");
 		n1 = n2;
 	}
-	printf("\n");
+	DEBUG_PRINT("\n");
 }
 
 __attribute__((destructor)) void destroy_runq()
@@ -106,6 +106,22 @@ __attribute__((destructor)) void destroy_runq()
 		free_thread(n1);
 		n1 = n2;
 	}
+
+	n1 = TAILQ_FIRST(&freeq);
+	while (n1 != NULL)
+	{
+		n2 = TAILQ_NEXT(n1, next_freeq);
+		if (n1 != _main_thread)
+		{
+			DEBUG_PRINT("Freeing thread freeq %p\n", n1);
+			VALGRIND_STACK_DEREGISTER(n1->valgrind_stackid);
+			free(n1->context->uc_stack.ss_sp);
+			free(n1->context);
+			free(n1);
+		}
+		n1 = n2;
+	}
+
 	if (_main_thread != _running_thread) free_thread(_running_thread);
 	else
 		DEBUG_PRINT("Main thread %p is running\n", _main_thread);
@@ -193,11 +209,24 @@ int thread_join(thread_t thread, void** retval)
 
 	swapcontext(waiting_thread->context, to_wait->context);
 
+	if (to_wait->status != TERMINATED) // for 33-switch-many-cascade
+	{
+		TAILQ_INSERT_TAIL(&freeq, to_wait, next_freeq);
+		to_wait->is_in_freeq = 1;
+		// If the thread has not terminated, it means that it has been interrupted
+		while (to_wait->status != TERMINATED)
+		{
+			thread_yield();
+		}
+	}
+
+
 	if (retval != NULL)
 		*retval = to_wait->retval;
 
 	DEBUG_PRINT("Thread %p (%d) has been joined, back to %p (%d)\n", to_wait, to_wait->status, _running_thread, _running_thread->status);
-	if (to_wait->status == TERMINATED) free_thread(to_wait);
+	DEBUG_PRINT("->Freeing thread %p\n", to_wait);
+	free_thread(to_wait);
 
 	return 0;
 }
@@ -296,6 +325,6 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 
 	//thread_t self = _running_thread;
 
-	DEBUG_PRINT("Status of thread %p is %d\n", self, self->status);
+	//DEBUG_PRINT("Status of thread %p is %d\n", self, self->status);
 	return 0;
 }

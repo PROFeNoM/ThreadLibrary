@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Werror -g -O0 -I .
+CFLAGS = -Wall -Werror -g -O3 -I .
 CBIBFLAG = -DUSE_PTHREAD
 PTHREAD = -lpthread
 USEPTHREAD ?= 0
