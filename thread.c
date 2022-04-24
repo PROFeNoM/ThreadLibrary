@@ -60,7 +60,7 @@ void free_thread(thread_t thread_to_free)
 {
 	if (thread_to_free && !thread_to_free->is_in_freeq && thread_to_free != _main_thread)
 	{
-		DEBUG_PRINT("Freeing thread %p\n", thread_to_free);
+		DEBUG_PRINT("Freeing thread %p (%d)\n", thread_to_free, thread_to_free->is_in_freeq);
 		VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
 		free(thread_to_free->context->uc_stack.ss_sp);
 		free(thread_to_free->context);
@@ -168,8 +168,13 @@ int thread_yield(void)
 	}
 
 	//DEBUG_PRINT("Thread %p (%d) yielding to thread %p (%d)\n", yielding_thread, yielding_thread->status, next_thread, next_thread->status);
-	yielding_thread->status = READY;
-	TAILQ_INSERT_TAIL(&runq, yielding_thread, next_runq);
+	if (yielding_thread->status == RUNNING)
+	{
+		yielding_thread->status = READY;
+		TAILQ_INSERT_TAIL(&runq, yielding_thread, next_runq);
+		DEBUG_PRINT("Adding %p to the runq\n", yielding_thread);
+	}
+	//DEBUG_PRINT("Removed next_thread %p (%d) from runq\n", next_thread, next_thread->status);
 	set_running_thread(next_thread);
 	TAILQ_REMOVE(&runq, next_thread, next_runq);
 
@@ -204,20 +209,28 @@ int thread_join(thread_t thread, void** retval)
 	to_wait->previous_thread = waiting_thread;
 	waiting_thread->status = WAITING;
 	DEBUG_PRINT("Thread %p (%d) waiting for thread %p (%d)\n", waiting_thread, waiting_thread->status, to_wait, to_wait->status);
-	set_running_thread(to_wait);
-	TAILQ_REMOVE(&runq, to_wait, next_runq);
-
-	swapcontext(waiting_thread->context, to_wait->context);
-
-	if (to_wait->status != TERMINATED) // for 33-switch-many-cascade
+	if (to_wait->status != WAITING)
 	{
+		set_running_thread(to_wait);
+		TAILQ_REMOVE(&runq, to_wait, next_runq);
+		swapcontext(waiting_thread->context, to_wait->context);
+	}
+	else
+	{
+		DEBUG_PRINT("Thread %p (%d) has not terminated\n", to_wait, to_wait->status);
 		TAILQ_INSERT_TAIL(&freeq, to_wait, next_freeq);
 		to_wait->is_in_freeq = 1;
-		// If the thread has not terminated, it means that it has been interrupted
 		while (to_wait->status != TERMINATED)
 		{
+			waiting_thread->status = WAITING;
 			thread_yield();
 		}
+		DEBUG_PRINT("##### Thread %p (%d) has terminated\n", to_wait, to_wait->status);
+
+		if (retval != NULL)
+			*retval = to_wait->retval;
+
+		return 0;
 	}
 
 
@@ -308,7 +321,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 	if (mutex->owner != NULL && mutex->owner != self)
 	{
 		DEBUG_PRINT("Thread %p is waiting for mutex %p (%p -> %d)\n", self, mutex, mutex->owner, mutex->owner->status);
-		self->status = WAITING;
+		self->status = LOCKED;
 		TAILQ_INSERT_TAIL(&mutex->waiting_threads, self, next_runq);
 		if (mutex->owner->status == READY) TAILQ_REMOVE(&runq, mutex->owner, next_runq);
 		set_running_thread(mutex->owner);
