@@ -16,7 +16,7 @@ thread_t _main_thread = NULL;
 
 void set_running_thread(thread_t thread)
 {
-	//DEBUG_PRINT("set_running_thread: %p\n", thread);
+	DEBUG_PRINT("set_running_thread: %p\n", thread);
 	thread->status = RUNNING;
 	_running_thread = thread;
 }
@@ -157,24 +157,24 @@ int thread_create(thread_t* newthread, void* (* func)(void*), void* funcarg)
  */
 int thread_yield(void)
 {
-	//DEBUG_PRINT("Yielding from thread %p\n", _running_thread);
+	DEBUG_PRINT("Yielding from thread %p\n", _running_thread);
 	thread_t yielding_thread = _running_thread;
 	thread_t next_thread = TAILQ_FIRST(&runq);
 
-	if (next_thread == NULL)
+	if (next_thread == NULL || yielding_thread->previous_thread)
 	{
 		DEBUG_PRINT("No thread to yield to\n");
 		return 0;
 	}
 
-	//DEBUG_PRINT("Thread %p (%d) yielding to thread %p (%d)\n", yielding_thread, yielding_thread->status, next_thread, next_thread->status);
+	DEBUG_PRINT("Thread %p (%d) yielding to thread %p (%d)\n", yielding_thread, yielding_thread->status, next_thread, next_thread->status);
 	if (yielding_thread->status == RUNNING)
 	{
 		yielding_thread->status = READY;
 		TAILQ_INSERT_TAIL(&runq, yielding_thread, next_runq);
 		DEBUG_PRINT("Adding %p to the runq\n", yielding_thread);
 	}
-	//DEBUG_PRINT("Removed next_thread %p (%d) from runq\n", next_thread, next_thread->status);
+	DEBUG_PRINT("Removed next_thread %p (%d) from runq\n", next_thread, next_thread->status);
 	set_running_thread(next_thread);
 	TAILQ_REMOVE(&runq, next_thread, next_runq);
 
