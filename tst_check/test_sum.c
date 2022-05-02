@@ -22,13 +22,14 @@ void* return_value(void* p)
     thread_sum[0] = ptr->arr[n];
 
     thread_exit(thread_sum);
+    return 0;
 }
 
 
 int main()
 {
 
-    int arrSize = 10;
+    int arrSize = 10000;
     int threadReturn = 1;
     int iterateur = arrSize / threadReturn;
 
@@ -56,20 +57,17 @@ int main()
         thread_create(&tid[i], return_value, &thread_data[i]);
     }
 
-    fprintf(stderr, "--- End creating thread ---\n");
+
     int** sum = (int**) calloc(iterateur, sizeof(int*));
-    fprintf(stderr, "--- Starting joining thread ---\n");
 
     for(int i = 0; i<iterateur; i++)
     {
         thread_join(tid[i], (void**) &sum[i]);
-        fprintf(stderr, "join thread n%d\n", i);
     }
 
     int result = 0;
     for(int i = 0; i<iterateur; i++)
     {
-        printf("sum[i]: %d\n", *sum[i]);
         result += *sum[i];
         free(sum[i]);
     }
