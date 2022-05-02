@@ -5,7 +5,7 @@ PTHREAD = -lpthread
 USEPTHREAD ?= 0
 DST_TEST_BIN = install/bin
 DST_TEST_LIB = install/lib
-DST_TEST_CHECK = tst_check
+TEST_CHECK_DIR = tst_check
 TEST_DIR = tst
 TSTFILESO = $(TSTFILES:%=%.o)
 TSTFILES = 	$(DST_TEST_BIN)/01-main \
@@ -53,10 +53,9 @@ TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
 TSTFILESCHECK = $(DST_TEST_BIN)/test_sum
 
 
-
 all: install
 
-check: install exec
+check: install exec test_check test_check_pthreads
 
 valgrind:
 	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
@@ -101,27 +100,19 @@ else
 endif
 
 
-test_check: test_sum.o $(LIBTHREAD) test_sum
+test_check: repositories $(TSTFILESOCHECK) $(LIBTHREAD) $(TSTFILESCHECK) test_check_exec delete_o_bin
 
-tt: $(TSTFILESO)
+test_check_pthreads: repositories $(TSTFILESOCHECK) $(TSTFILESCHECK) test_check_exec delete_o_bin
 
-test_check_pthreads: $(TSTFILESOCHECK) $(TSTFILESCHECK)
-
-
-test_sum.o: $(DST_TEST_CHECK)/test_sum.c
+$(DST_TEST_BIN)/%.o: $(TEST_CHECK_DIR)/%.c
 ifeq ($(USEPTHREAD),1)
 	$(CC) $(CFLAGS) -c $^ -o $@ $(CBIBFLAG)
 else
 	$(CC) $(CFLAGS) -c $^ -o $@
 endif
 
-test_sum:
-ifeq ($(USEPTHREAD),1)
-	$(CC) -o $@_c $@.o $(PTHREAD)
-else
-	$(CC) $@.o -L$(LDLIBRARYPATH) -o $@ -l$(LIBTHREADNAME)
-endif
-
+test_check_exec:
+	LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$(TSTFILESCHECK)
 
 
 

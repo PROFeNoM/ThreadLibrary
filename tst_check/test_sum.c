@@ -52,7 +52,7 @@ int main()
     {
         thread_data[i].thread_num = i;
         thread_data[i].arr = int_arr;
-        fprintf(stderr, "Creating thread n%d\n", thread_data[i].thread_num);
+        // fprintf(stderr, "Creating thread n%d\n", thread_data[i].thread_num);
 
         thread_create(&tid[i], return_value, &thread_data[i]);
     }
@@ -83,5 +83,5 @@ int main()
 
     printf("Sum array: %d\n", result);
 
-    return 1;
+    return 0;
 }
