@@ -48,13 +48,10 @@ TSTFILESWITHARGS2 =	$(DST_TEST_BIN)/31-switch-many \
 										$(DST_TEST_BIN)/32-switch-many-join
 TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
-<<<<<<< HEAD
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
 TSTFILESCHECK = $(DST_TEST_BIN)/test_sum
 
-=======
->>>>>>> dc5768c2a60fb1a137db754956ac8a6aa1f08921
 
 
 all: install

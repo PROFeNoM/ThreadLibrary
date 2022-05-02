@@ -49,11 +49,12 @@ if nb_threads < 100:
 
 if len(args) == 3:
     nb_yields = int(args[2])
-step = int(nb_threads/100)
+step = int(nb_threads/1000)
 
 bar = Bar.Bar('Running ' + filename1 + ' vs. ' + filename2, step=step, max=nb_threads / step, suffix='%(percent).1f%% - %(eta)ds')
 for i in range(1, nb_threads, step):
     #print(f'Running {filename1} & {filename2} ==> {i}.' + '\r')
+
     time1.append(getTime(filename1, i))
     time2.append(getTime(filename2, i))
     bar.next()
