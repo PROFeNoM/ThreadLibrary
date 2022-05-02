@@ -21,7 +21,7 @@ TSTFILES = 	$(DST_TEST_BIN)/01-main \
 						$(DST_TEST_BIN)/33-switch-many-cascade \
 						$(DST_TEST_BIN)/51-fibonacci \
 						$(DST_TEST_BIN)/61-mutex \
-						$(DST_TEST_BIN)/62-mutex \
+						$(DST_TEST_BIN)/62-mutex
 						# $(DST_TEST_BIN)/81-deadlock
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
 THREADONLY =	$(DST_TEST_BIN)/21-create-many \
@@ -48,10 +48,13 @@ TSTFILESWITHARGS2 =	$(DST_TEST_BIN)/31-switch-many \
 										$(DST_TEST_BIN)/32-switch-many-join
 TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
+<<<<<<< HEAD
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
 TSTFILESCHECK = $(DST_TEST_BIN)/test_sum
 
+=======
+>>>>>>> dc5768c2a60fb1a137db754956ac8a6aa1f08921
 
 
 all: install
