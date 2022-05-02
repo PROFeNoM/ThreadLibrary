@@ -5,6 +5,7 @@ PTHREAD = -lpthread
 USEPTHREAD ?= 0
 DST_TEST_BIN = install/bin
 DST_TEST_LIB = install/lib
+DST_TEST_CHECK = tst_check
 TEST_DIR = tst
 TSTFILESO = $(TSTFILES:%=%.o)
 TSTFILES = 	$(DST_TEST_BIN)/01-main \
@@ -46,7 +47,11 @@ TSTFILESWITHARGS1 =	$(DST_TEST_BIN)/21-create-many \
 TSTFILESWITHARGS2 =	$(DST_TEST_BIN)/31-switch-many \
 										$(DST_TEST_BIN)/32-switch-many-join
 TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
-TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci \
+TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
+
+TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
+TSTFILESCHECK = $(DST_TEST_BIN)/test_sum
+
 
 
 all: install
@@ -94,6 +99,30 @@ ifeq ($(USEPTHREAD),1)
 else
 	$(CC) $@.o -L$(LDLIBRARYPATH) -o $@ -l$(LIBTHREADNAME)
 endif
+
+
+test_check: test_sum.o $(LIBTHREAD) test_sum
+
+tt: $(TSTFILESO)
+
+test_check_pthreads: $(TSTFILESOCHECK) $(TSTFILESCHECK)
+
+
+test_sum.o: $(DST_TEST_CHECK)/test_sum.c
+ifeq ($(USEPTHREAD),1)
+	$(CC) $(CFLAGS) -c $^ -o $@ $(CBIBFLAG)
+else
+	$(CC) $(CFLAGS) -c $^ -o $@
+endif
+
+test_sum:
+ifeq ($(USEPTHREAD),1)
+	$(CC) -o $@_c $@.o $(PTHREAD)
+else
+	$(CC) $@.o -L$(LDLIBRARYPATH) -o $@ -l$(LIBTHREADNAME)
+endif
+
+
 
 
 
