@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "thread.h"
 
 struct heavy
@@ -9,13 +12,18 @@ struct heavy
     long long int Sylvain;
 };
 
-void lets_go(struct heavy big_param)
+void * lets_go(void *)
 {
-    lets_go(big_param);
+    struct heavy heavy_struct;
+    lets_go(NULL);
 }
 
-int main(int argc, char ** argv)
+int main(int argc, char ** argv) // Executer la fonction récursive dans un thread particulier
 {
-    struct heavy heavy_struct = {0, 1, 2, 3, 4};
-    lets_go(heavy_struct);
+    thread_t t;
+    void * res;
+    int err = thread_create(t, lets_go, NULL);
+    assert(!err);
+    err = thread_join(t, &res);
+    assert(!err);
 }
