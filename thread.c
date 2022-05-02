@@ -2,12 +2,24 @@
 #include <stdlib.h>
 #include <ucontext.h>
 #include <valgrind/valgrind.h>
-
+#include <sys/mman.h>
+#include <unistd.h>
+#include <signal.h>
+#include <strings.h>
 #include "thread.h"
 #include "utils.h"
 
+#define SEGV_STACK_SIZE MINSIGSTKSZ + 4096
+
 //#define DEBUG_PRINT(...) printf(__VA_ARGS__)
 #define DEBUG_PRINT(...)
+
+#define OPT_PROTECT_STACK 0
+
+static inline void sigsegv_handler(int signum, siginfo_t *info, void *data) {
+    printf("Received signal finally\n");
+    exit(1);
+}
 
 TAILQ_HEAD(, thread_struct) runq;
 TAILQ_HEAD(, thread_struct) freeq;
@@ -34,7 +46,15 @@ void initialize_context(thread_t thread, int initialize_stack)
 	if (initialize_stack)
 	{
 		uc->uc_stack.ss_size = THREAD_STACK_SIZE;
-		uc->uc_stack.ss_sp = malloc(THREAD_STACK_SIZE);
+    if (OPT_PROTECT_STACK == 1)
+    {
+        uc->uc_stack.ss_sp = valloc(THREAD_STACK_SIZE);
+        mprotect(uc->uc_stack.ss_sp, getpagesize(), PROT_NONE);
+    }
+    else
+    {
+        uc->uc_stack.ss_sp = malloc(THREAD_STACK_SIZE);
+    }
 		thread->valgrind_stackid = VALGRIND_STACK_REGISTER(uc->uc_stack.ss_sp,
 				uc->uc_stack.ss_sp + uc->uc_stack.ss_size);
 	}
@@ -62,6 +82,10 @@ void free_thread(thread_t thread_to_free)
 	{
 		DEBUG_PRINT("Freeing thread %p (%d)\n", thread_to_free, thread_to_free->is_in_freeq);
 		VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
+        if (OPT_PROTECT_STACK == 1)
+        {
+            mprotect(thread_to_free->context->uc_stack.ss_sp, getpagesize(), PROT_READ | PROT_WRITE);
+        }
 		free(thread_to_free->context->uc_stack.ss_sp);
 		free(thread_to_free->context);
 		free(thread_to_free);
@@ -71,6 +95,21 @@ void free_thread(thread_t thread_to_free)
 
 __attribute__((constructor)) void initialize_runq()
 {
+    if (OPT_PROTECT_STACK == 1)
+    {
+        struct sigaction action;
+        bzero(&action, sizeof(action));
+        action.sa_flags = SA_SIGINFO|SA_STACK;
+        action.sa_sigaction = &sigsegv_handler;
+        sigaction(SIGSEGV, &action, NULL);
+
+        stack_t segv_stack;
+        segv_stack.ss_sp = valloc(SEGV_STACK_SIZE);
+        segv_stack.ss_flags = 0;
+        segv_stack.ss_size = SEGV_STACK_SIZE;
+        sigaltstack(&segv_stack, NULL);
+    }
+
 	TAILQ_INIT(&runq);
 	TAILQ_INIT(&freeq);
 
