@@ -87,25 +87,14 @@ void * divide_or_not(void * a) {
     return sort_two(array);
 }
 
-void sorting_merge(int * array)
-{
-    /*
-    int size_array = LENGTH / 2;
-    int* array_two = malloc(sizeof(int) * 2);
-
-        array_two = divide_or_not(array);
-        // nhnprintf("0 = %d, 1 = %d\n", array_two[0], array_two[1]);
-    */
-}
-
 
 void triFusion(int i, int j, int tab[], int tmp[]) {
     if(j <= i){ return;}
 
     int m = (i + j) / 2;
 
-    triFusion(i, m, tab, tmp);     //trier la moitié gauche récursivement
-    triFusion(m + 1, j, tab, tmp); //trier la moitié droite récursivement
+    triFusion(i, m, tab, tmp);
+    triFusion(m + 1, j, tab, tmp);
 
     int pg = i;
     int pd = m + 1;
@@ -114,19 +103,23 @@ void triFusion(int i, int j, int tab[], int tmp[]) {
 
     for(c = i; c <= j; c++)
     {
-        if(pg == m + 1) { //le pointeur du sous-tableau de gauche a atteint la limite
+            // Array empty
+        if(pg == m + 1) {
             tmp[c] = tab[pd];
             pd++;
         }
-        else if (pd == j + 1) { //le pointeur du sous-tableau de droite a atteint la limite
+        else if (pd == j + 1) {
             tmp[c] = tab[pg];
             pg++;
         }
-        else if (tab[pg] < tab[pd]) { //le pointeur du sous-tableau de gauche pointe vers un élément plus petit
+        // Getting minimum of the arrays
+        else if (tab[pg] < tab[pd])
+        {
             tmp[c] = tab[pg];
             pg++;
         }
-        else {  //le pointeur du sous-tableau de droite pointe vers un élément plus petit
+        else
+        {
             tmp[c] = tab[pd];
             pd++;
         }
