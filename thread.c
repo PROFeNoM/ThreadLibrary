@@ -15,7 +15,7 @@
 #define DEBUG_PRINT(...)
 
 #define OPT_PROTECT_STACK 0
-#define OPT_DEADLOCK 0
+#define OPT_DEADLOCK 1
 
 static inline void sigsegv_handler(int signum, siginfo_t *info, void *data) {
     printf("Received signal\n");
@@ -24,13 +24,14 @@ static inline void sigsegv_handler(int signum, siginfo_t *info, void *data) {
 
 TAILQ_HEAD(, thread_struct) runq;
 TAILQ_HEAD(, thread_struct) freeq;
+TAILQ_HEAD(, thread_struct) deadlockq;
 thread_t _running_thread = NULL;
 thread_t _main_thread = NULL;
 
 static inline void set_running_thread(thread_t thread)
 {
 	DEBUG_PRINT("set_running_thread: %p\n", thread);
-	thread->status = RUNNING;
+	thread->status = thread->status == DEADLOCK ? DEADLOCK : RUNNING;
 	_running_thread = thread;
 }
 
@@ -237,7 +238,20 @@ int thread_join(thread_t thread, void** retval)
     if (OPT_DEADLOCK) {
         thread_t t = waiting_thread->previous_thread;
         while (t != NULL) {
-            if (t == to_wait) {
+            if (t == waiting_thread) {
+                DEBUG_PRINT("Deadlock detected %p\n", waiting_thread);
+                waiting_thread->status = DEADLOCK;
+                TAILQ_INSERT_TAIL(&freeq, waiting_thread, next_freeq);
+                waiting_thread->is_in_freeq = 1;
+                t = waiting_thread->previous_thread;
+                DEBUG_PRINT("Setting %p to %d\n", waiting_thread, waiting_thread->status);
+                while (t != waiting_thread) {
+                    t->status = DEADLOCK;
+                    TAILQ_INSERT_TAIL(&freeq, t, next_freeq);
+                    t->is_in_freeq = 1;
+                    DEBUG_PRINT("Setting %p to %d\n", t, t->status);
+                    t = t->previous_thread;
+                }
                 return -1;
             }
             t = t->previous_thread;
@@ -273,8 +287,10 @@ int thread_join(thread_t thread, void** retval)
 		*retval = to_wait->retval;
 
 	DEBUG_PRINT("Thread %p (%d) has been joined, back to %p (%d)\n", to_wait, to_wait->status, _running_thread, _running_thread->status);
-	DEBUG_PRINT("->Freeing thread %p\n", to_wait);
-	free_thread(to_wait);
+	if (to_wait->status != DEADLOCK) {
+        DEBUG_PRINT("->Freeing thread %p\n", to_wait);
+        free_thread(to_wait);
+    }
 
 	return 0;
 }
@@ -293,7 +309,7 @@ void thread_exit(void* retval)
 	thread_t exiting_thread = _running_thread;
 
 	exiting_thread->retval = retval;
-	exiting_thread->status = TERMINATED;
+	exiting_thread->status = exiting_thread->status == DEADLOCK ? DEADLOCK : TERMINATED;
 
 	if (exiting_thread->previous_thread != NULL)
 	{

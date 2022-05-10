@@ -11,7 +11,7 @@
 
 enum STATUS
 {
-	WAITING, TERMINATED, RUNNING, READY, LOCKED
+	WAITING, TERMINATED, RUNNING, READY, LOCKED, DEADLOCK
 };
 
 /* identifiant de thread
@@ -32,6 +32,7 @@ struct thread_struct
 {
 	TAILQ_ENTRY(thread_struct) next_runq;
 	TAILQ_ENTRY(thread_struct) next_freeq;
+	TAILQ_ENTRY(thread_struct) next_deadlockq;
 
 	ucontext_t* context;
 	thread_t previous_thread;
