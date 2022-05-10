@@ -15,7 +15,7 @@
 #define DEBUG_PRINT(...)
 
 #define OPT_PROTECT_STACK 0
-#define OPT_DEADLOCK 1
+#define OPT_DEADLOCK 0
 
 static inline void sigsegv_handler(int signum, siginfo_t *info, void *data) {
     printf("Received signal\n");
