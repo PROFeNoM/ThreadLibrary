@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <strings.h>
+
 #include "thread.h"
-#include "utils.h"
 
 #define SEGV_STACK_SIZE MINSIGSTKSZ + 4096
 
@@ -15,9 +15,10 @@
 #define DEBUG_PRINT(...)
 
 #define OPT_PROTECT_STACK 0
+#define OPT_DEADLOCK 1
 
 static inline void sigsegv_handler(int signum, siginfo_t *info, void *data) {
-    printf("Received signal finally\n");
+    printf("Received signal\n");
     exit(1);
 }
 
@@ -26,7 +27,7 @@ TAILQ_HEAD(, thread_struct) freeq;
 thread_t _running_thread = NULL;
 thread_t _main_thread = NULL;
 
-void set_running_thread(thread_t thread)
+static inline void set_running_thread(thread_t thread)
 {
 	DEBUG_PRINT("set_running_thread: %p\n", thread);
 	thread->status = RUNNING;
@@ -39,7 +40,7 @@ void* thread_handler(void* (* func)(void*), void* funcarg)
 	return NULL;
 }
 
-void initialize_context(thread_t thread, int initialize_stack)
+static inline void initialize_context(thread_t thread, int initialize_stack)
 {
 	ucontext_t* uc = malloc(sizeof(ucontext_t));
 	getcontext(uc);
@@ -67,7 +68,7 @@ void initialize_context(thread_t thread, int initialize_stack)
 
 }
 
-void initialize_thread(thread_t thread, int is_main_thread)
+static inline void initialize_thread(thread_t thread, int is_main_thread)
 {
 	initialize_context(thread, !is_main_thread);
 	thread->status = READY;
@@ -93,7 +94,7 @@ void free_thread(thread_t thread_to_free)
 
 }
 
-__attribute__((constructor)) void initialize_runq()
+__attribute__((constructor)) void initialize_lib()
 {
     if (OPT_PROTECT_STACK == 1)
     {
@@ -120,23 +121,7 @@ __attribute__((constructor)) void initialize_runq()
 	DEBUG_PRINT("Main thread created %p\n", _main_thread);
 }
 
-void print_queue()
-{
-	DEBUG_PRINT("MAIN: %p\n", _main_thread);
-	/*thread_t thread;
-	TAILQ_FOREACH(thread, &runq, field) DEBUG_PRINT("%s%p%s -> ",
-			thread == _running_thread ? "[" : "", thread, thread == _running_thread ? "]" : "");*/
-	thread_t n1 = TAILQ_FIRST(&runq), n2;
-	while (n1 != NULL)
-	{
-		n2 = TAILQ_NEXT(n1, next_runq);
-		DEBUG_PRINT("%s%p%s -> ", n1 == _running_thread ? "[" : "", n1, n1 == _running_thread ? "]" : "");
-		n1 = n2;
-	}
-	DEBUG_PRINT("\n");
-}
-
-__attribute__((destructor)) void destroy_runq()
+__attribute__((destructor)) void destroy_lib()
 {
 	thread_t n1 = TAILQ_FIRST(&runq), n2;
 	while (n1 != NULL)
@@ -235,6 +220,16 @@ int thread_join(thread_t thread, void** retval)
 	{
 		return -1;
 	}
+
+    if (OPT_DEADLOCK) {
+        thread_t t = waiting_thread->previous_thread;
+        while (t != NULL) {
+            if (t == waiting_thread) {
+                return -1;
+            }
+            t = t->previous_thread;
+        }
+    }
 
 	if (to_wait->status == TERMINATED)
 	{
