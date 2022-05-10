@@ -18,7 +18,7 @@ static void * thfunc2(void *dummy __attribute__((unused)))
   printf("join th2->th0 = %d\n", err);
   totalerr += err;
   thread_exit(NULL);
-  return res;
+  //return res;
 }
 
 static void * thfunc1(void *dummy __attribute__((unused)))
@@ -30,7 +30,7 @@ static void * thfunc1(void *dummy __attribute__((unused)))
   printf("join th1->th2 = %d\n", err);
   totalerr += err;
   thread_exit(NULL);
-  return res;
+  //return res;
 }
 
 int main()
