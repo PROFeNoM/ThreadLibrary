@@ -29,7 +29,7 @@ void* return_value(void* p)
 int main()
 {
 
-    int arrSize = 10000;
+    int arrSize = 32000;
     int threadReturn = 1;
     int iterateur = arrSize / threadReturn;
 

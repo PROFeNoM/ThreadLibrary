@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Werror -O3 -I .
+CFLAGS = -Wall -Werror -g -O3 -I .
 CBIBFLAG = -DUSE_PTHREAD
 PTHREAD = -lpthread
 USEPTHREAD ?= 0
@@ -50,8 +50,8 @@ TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
-TSTFILESCHECK = $(DST_TEST_TEST)/test_sum \
-								$(DST_TEST_TEST)/stack_oveflow
+TSTFILESCHECK = $(DST_TEST_TEST)/test_sum
+								# $(DST_TEST_TEST)/stack_oveflow
 
 
 all: install
@@ -101,9 +101,12 @@ else
 endif
 
 
-test_check: repositories $(TSTFILESOCHECK) $(LIBTHREAD) $(TSTFILESCHECK) test_check_exec delete_o_bin
+test_check: repositories $(TSTFILESOCHECK) $(LIBTHREAD) $(TSTFILESCHECK) test_check_exec delete_o_test
 
-test_check_pthreads: repositories $(TSTFILESOCHECK) $(TSTFILESCHECK) test_check_exec delete_o_bin
+test_check_pthreads:
+	make -B USEPTHREAD=1 our_test_check_pthreads
+
+our_test_check_pthreads: repositories $(TSTFILESOCHECK) $(TSTFILESCHECK) test_check_exec_c delete_o_test
 
 $(DST_TEST_TEST)/%.o: $(TEST_CHECK_DIR)/%.c
 ifeq ($(USEPTHREAD),1)
@@ -112,8 +115,18 @@ else
 	$(CC) $(CFLAGS) -c $^ -o $@
 endif
 
+$(DST_TEST_TEST)/%:
+ifeq ($(USEPTHREAD),1)
+	$(CC) -o $@_c $@.o $(PTHREAD)
+else
+	$(CC) $@.o -L$(LDLIBRARYPATH) -o $@ -l$(LIBTHREADNAME)
+endif
+
 test_check_exec:
 	LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$(TSTFILESCHECK)
+
+test_check_exec_c:
+	LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$(TSTFILESCHECK)_c
 
 
 
@@ -135,6 +148,10 @@ save_graphs:
 
 delete_o_bin:
 	rm -f $(DST_TEST_BIN)/*.o
+
+delete_o_test:
+	rm -f $(DST_TEST_TEST)/*.o
+	rm -f *.o
 
 
 exec:
