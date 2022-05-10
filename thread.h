@@ -32,7 +32,6 @@ struct thread_struct
 {
 	TAILQ_ENTRY(thread_struct) next_runq;
 	TAILQ_ENTRY(thread_struct) next_freeq;
-	TAILQ_ENTRY(thread_struct) next_deadlockq;
 
 	ucontext_t* context;
 	thread_t previous_thread;

@@ -24,7 +24,6 @@ static inline void sigsegv_handler(int signum, siginfo_t *info, void *data) {
 
 TAILQ_HEAD(, thread_struct) runq;
 TAILQ_HEAD(, thread_struct) freeq;
-TAILQ_HEAD(, thread_struct) deadlockq;
 thread_t _running_thread = NULL;
 thread_t _main_thread = NULL;
 
