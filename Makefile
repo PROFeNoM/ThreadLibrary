@@ -1,9 +1,10 @@
 CC = gcc
-CFLAGS = -Wall -Werror -g -O3 -I .
+CFLAGS = -Wall -Werror -O3 -I .
 CBIBFLAG = -DUSE_PTHREAD
 PTHREAD = -lpthread
 USEPTHREAD ?= 0
 DST_TEST_BIN = install/bin
+DST_TEST_TEST = install/test
 DST_TEST_LIB = install/lib
 TEST_CHECK_DIR = tst_check
 TEST_DIR = tst
@@ -50,7 +51,8 @@ TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
-TSTFILESCHECK = $(DST_TEST_BIN)/test_sum
+TSTFILESCHECK = $(DST_TEST_TEST)/test_sum \
+								$(DST_TEST_TEST)/stack_oveflow
 
 
 all: install
@@ -83,7 +85,7 @@ ifeq ($(USEPTHREAD),0)
 endif
 
 repositories:
-	mkdir -p install/lib install/bin
+	mkdir -p install/lib install/bin install/test
 
 $(DST_TEST_BIN)/%.o: $(TEST_DIR)/%.c
 ifeq ($(USEPTHREAD),1)
@@ -104,7 +106,7 @@ test_check: repositories $(TSTFILESOCHECK) $(LIBTHREAD) $(TSTFILESCHECK) test_ch
 
 test_check_pthreads: repositories $(TSTFILESOCHECK) $(TSTFILESCHECK) test_check_exec delete_o_bin
 
-$(DST_TEST_BIN)/%.o: $(TEST_CHECK_DIR)/%.c
+$(DST_TEST_TEST)/%.o: $(TEST_CHECK_DIR)/%.c
 ifeq ($(USEPTHREAD),1)
 	$(CC) $(CFLAGS) -c $^ -o $@ $(CBIBFLAG)
 else
