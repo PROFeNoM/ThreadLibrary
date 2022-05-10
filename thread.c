@@ -314,8 +314,10 @@ void thread_exit(void* retval)
 	{
 		DEBUG_PRINT("Thread %p is waiting for thread %p\n", exiting_thread->previous_thread, exiting_thread);
 		set_running_thread(exiting_thread->previous_thread);
-		if (exiting_thread == _main_thread) swapcontext(exiting_thread->context, exiting_thread->previous_thread->context);
-		else setcontext(exiting_thread->previous_thread->context);
+		if (exiting_thread == _main_thread)
+            swapcontext(exiting_thread->context, exiting_thread->previous_thread->context);
+		else
+            setcontext(exiting_thread->previous_thread->context);
 
 	}
 	else
@@ -327,8 +329,10 @@ void thread_exit(void* retval)
 			DEBUG_PRINT("Thread %p is the next thread to run\n", next_thread);
 			set_running_thread(next_thread);
 			TAILQ_REMOVE(&runq, next_thread, next_runq);
-			if (exiting_thread == _main_thread) swapcontext(exiting_thread->context, next_thread->context);
-			else setcontext(next_thread->context);
+			if (exiting_thread == _main_thread)
+                swapcontext(exiting_thread->context, next_thread->context);
+			else
+                setcontext(next_thread->context);
 		}
 		else
 		{
