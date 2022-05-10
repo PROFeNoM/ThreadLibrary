@@ -15,7 +15,7 @@
 #define DEBUG_PRINT(...)
 
 #define OPT_PROTECT_STACK 0
-#define OPT_DEADLOCK 1
+#define OPT_DEADLOCK 0
 
 static inline void sigsegv_handler(int signum, siginfo_t *info, void *data) {
     printf("Received signal\n");
@@ -221,16 +221,6 @@ int thread_join(thread_t thread, void** retval)
 		return -1;
 	}
 
-    if (OPT_DEADLOCK) {
-        thread_t t = waiting_thread->previous_thread;
-        while (t != NULL) {
-            if (t == waiting_thread) {
-                return -1;
-            }
-            t = t->previous_thread;
-        }
-    }
-
 	if (to_wait->status == TERMINATED)
 	{
 		if (retval != NULL)
@@ -243,6 +233,17 @@ int thread_join(thread_t thread, void** retval)
 	to_wait->previous_thread = waiting_thread;
 	waiting_thread->status = WAITING;
 	DEBUG_PRINT("Thread %p (%d) waiting for thread %p (%d)\n", waiting_thread, waiting_thread->status, to_wait, to_wait->status);
+
+    if (OPT_DEADLOCK) {
+        thread_t t = waiting_thread->previous_thread;
+        while (t != NULL) {
+            if (t == to_wait) {
+                return -1;
+            }
+            t = t->previous_thread;
+        }
+    }
+
 	if (to_wait->status != WAITING)
 	{
 		set_running_thread(to_wait);
