@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <ucontext.h>
 #include <valgrind/valgrind.h>
-#include <sys/mman.h>
-#include <unistd.h>
 #include <signal.h>
 #include <strings.h>
 
@@ -11,15 +9,21 @@
 
 #define SEGV_STACK_SIZE MINSIGSTKSZ + 4096
 
-//#define DEBUG_PRINT(...) printf(__VA_ARGS__)
-#define DEBUG_PRINT(...)
-
+#define OPT_DEBUG 0
 #define OPT_PROTECT_STACK 0
 #define OPT_DEADLOCK 0
 
-static inline void sigsegv_handler(int signum, siginfo_t *info, void *data) {
-    printf("Received signal\n");
-    exit(1);
+#if OPT_DEBUG
+#define DEBUG_PRINT(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DEBUG_PRINT(...)
+#endif
+
+
+static inline void sigsegv_handler(int signum, siginfo_t* info, void* data)
+{
+	printf("Received signal\n");
+	exit(1);
 }
 
 TAILQ_HEAD(, thread_struct) runq;
@@ -47,15 +51,13 @@ static inline void initialize_context(thread_t thread, int initialize_stack)
 	if (initialize_stack)
 	{
 		uc->uc_stack.ss_size = THREAD_STACK_SIZE;
-    if (OPT_PROTECT_STACK == 1)
-    {
-        uc->uc_stack.ss_sp = valloc(THREAD_STACK_SIZE);
-        mprotect(uc->uc_stack.ss_sp, getpagesize(), PROT_NONE);
-    }
-    else
-    {
-        uc->uc_stack.ss_sp = malloc(THREAD_STACK_SIZE);
-    }
+
+#if OPT_PROTECT_STACK
+		uc->uc_stack.ss_sp = valloc(THREAD_STACK_SIZE);
+		mprotect(uc->uc_stack.ss_sp, getpagesize(), PROT_NONE);
+#else
+		uc->uc_stack.ss_sp = malloc(THREAD_STACK_SIZE);
+#endif
 		thread->valgrind_stackid = VALGRIND_STACK_REGISTER(uc->uc_stack.ss_sp,
 				uc->uc_stack.ss_sp + uc->uc_stack.ss_size);
 	}
@@ -83,10 +85,9 @@ void free_thread(thread_t thread_to_free)
 	{
 		DEBUG_PRINT("Freeing thread %p (%d)\n", thread_to_free, thread_to_free->is_in_freeq);
 		VALGRIND_STACK_DEREGISTER(thread_to_free->valgrind_stackid);
-        if (OPT_PROTECT_STACK == 1)
-        {
-            mprotect(thread_to_free->context->uc_stack.ss_sp, getpagesize(), PROT_READ | PROT_WRITE);
-        }
+#if OPT_PROTECT_STACK
+		mprotect(thread_to_free->context->uc_stack.ss_sp, getpagesize(), PROT_READ | PROT_WRITE);
+#endif
 		free(thread_to_free->context->uc_stack.ss_sp);
 		free(thread_to_free->context);
 		free(thread_to_free);
@@ -96,20 +97,19 @@ void free_thread(thread_t thread_to_free)
 
 __attribute__((constructor)) void initialize_lib()
 {
-    if (OPT_PROTECT_STACK == 1)
-    {
-        struct sigaction action;
-        bzero(&action, sizeof(action));
-        action.sa_flags = SA_SIGINFO|SA_STACK;
-        action.sa_sigaction = &sigsegv_handler;
-        sigaction(SIGSEGV, &action, NULL);
+#if OPT_PROTECT_STACK
+	struct sigaction action;
+	bzero(&action, sizeof(action));
+	action.sa_flags = SA_SIGINFO|SA_STACK;
+	action.sa_sigaction = &sigsegv_handler;
+	sigaction(SIGSEGV, &action, NULL);
 
-        stack_t segv_stack;
-        segv_stack.ss_sp = valloc(SEGV_STACK_SIZE);
-        segv_stack.ss_flags = 0;
-        segv_stack.ss_size = SEGV_STACK_SIZE;
-        sigaltstack(&segv_stack, NULL);
-    }
+	stack_t segv_stack;
+	segv_stack.ss_sp = valloc(SEGV_STACK_SIZE);
+	segv_stack.ss_flags = 0;
+	segv_stack.ss_size = SEGV_STACK_SIZE;
+	sigaltstack(&segv_stack, NULL);
+#endif
 
 	TAILQ_INIT(&runq);
 	TAILQ_INIT(&freeq);
@@ -146,7 +146,8 @@ __attribute__((destructor)) void destroy_lib()
 		n1 = n2;
 	}
 
-	if (_main_thread != _running_thread) free_thread(_running_thread);
+	if (_main_thread != _running_thread)
+		free_thread(_running_thread);
 	else
 		DEBUG_PRINT("Main thread %p is running\n", _main_thread);
 	free(_main_thread->context);
@@ -191,7 +192,8 @@ int thread_yield(void)
 		return 0;
 	}
 
-	DEBUG_PRINT("Thread %p (%d) yielding to thread %p (%d)\n", yielding_thread, yielding_thread->status, next_thread, next_thread->status);
+	DEBUG_PRINT("Thread %p (%d) yielding to thread %p (%d)\n", yielding_thread, yielding_thread->status, next_thread,
+			next_thread->status);
 	if (yielding_thread->status == RUNNING)
 	{
 		yielding_thread->status = READY;
@@ -232,30 +234,31 @@ int thread_join(thread_t thread, void** retval)
 
 	to_wait->previous_thread = waiting_thread;
 	waiting_thread->status = WAITING;
-	DEBUG_PRINT("Thread %p (%d) waiting for thread %p (%d)\n", waiting_thread, waiting_thread->status, to_wait, to_wait->status);
+	DEBUG_PRINT("Thread %p (%d) waiting for thread %p (%d)\n",
+			waiting_thread, waiting_thread->status, to_wait, to_wait->status);
 
-    if (OPT_DEADLOCK) {
-        thread_t t = waiting_thread->previous_thread;
-        while (t != NULL) {
-            if (t == waiting_thread) {
-                DEBUG_PRINT("Deadlock detected %p\n", waiting_thread);
-                waiting_thread->status = DEADLOCK;
-                TAILQ_INSERT_TAIL(&freeq, waiting_thread, next_freeq);
-                waiting_thread->is_in_freeq = 1;
-                t = waiting_thread->previous_thread;
-                DEBUG_PRINT("Setting %p to %d\n", waiting_thread, waiting_thread->status);
-                while (t != waiting_thread) {
-                    t->status = DEADLOCK;
-                    TAILQ_INSERT_TAIL(&freeq, t, next_freeq);
-                    t->is_in_freeq = 1;
-                    DEBUG_PRINT("Setting %p to %d\n", t, t->status);
-                    t = t->previous_thread;
-                }
-                return -1;
-            }
-            t = t->previous_thread;
-        }
-    }
+#if OPT_DEADLOCK
+	thread_t t = waiting_thread->previous_thread;
+	while (t != NULL) {
+		if (t == waiting_thread) {
+			DEBUG_PRINT("Deadlock detected %p\n", waiting_thread);
+			waiting_thread->status = DEADLOCK;
+			TAILQ_INSERT_TAIL(&freeq, waiting_thread, next_freeq);
+			waiting_thread->is_in_freeq = 1;
+			t = waiting_thread->previous_thread;
+			DEBUG_PRINT("Setting %p to %d\n", waiting_thread, waiting_thread->status);
+			while (t != waiting_thread) {
+				t->status = DEADLOCK;
+				TAILQ_INSERT_TAIL(&freeq, t, next_freeq);
+				t->is_in_freeq = 1;
+				DEBUG_PRINT("Setting %p to %d\n", t, t->status);
+				t = t->previous_thread;
+			}
+			return -1;
+		}
+		t = t->previous_thread;
+	}
+#endif
 
 	if (to_wait->status != WAITING)
 	{
@@ -281,15 +284,16 @@ int thread_join(thread_t thread, void** retval)
 		return 0;
 	}
 
-
 	if (retval != NULL)
 		*retval = to_wait->retval;
 
-	DEBUG_PRINT("Thread %p (%d) has been joined, back to %p (%d)\n", to_wait, to_wait->status, _running_thread, _running_thread->status);
-	if (to_wait->status != DEADLOCK) {
-        DEBUG_PRINT("->Freeing thread %p\n", to_wait);
-        free_thread(to_wait);
-    }
+	DEBUG_PRINT("Thread %p (%d) has been joined, back to %p (%d)\n",
+			to_wait, to_wait->status, _running_thread, _running_thread->status);
+	if (to_wait->status != DEADLOCK)
+	{
+		DEBUG_PRINT("->Freeing thread %p\n", to_wait);
+		free_thread(to_wait);
+	}
 
 	return 0;
 }
@@ -315,9 +319,9 @@ void thread_exit(void* retval)
 		DEBUG_PRINT("Thread %p is waiting for thread %p\n", exiting_thread->previous_thread, exiting_thread);
 		set_running_thread(exiting_thread->previous_thread);
 		if (exiting_thread == _main_thread)
-            swapcontext(exiting_thread->context, exiting_thread->previous_thread->context);
+			swapcontext(exiting_thread->context, exiting_thread->previous_thread->context);
 		else
-            setcontext(exiting_thread->previous_thread->context);
+			setcontext(exiting_thread->previous_thread->context);
 
 	}
 	else
@@ -330,9 +334,9 @@ void thread_exit(void* retval)
 			set_running_thread(next_thread);
 			TAILQ_REMOVE(&runq, next_thread, next_runq);
 			if (exiting_thread == _main_thread)
-                swapcontext(exiting_thread->context, next_thread->context);
+				swapcontext(exiting_thread->context, next_thread->context);
 			else
-                setcontext(next_thread->context);
+				setcontext(next_thread->context);
 		}
 		else
 		{
@@ -345,14 +349,12 @@ void thread_exit(void* retval)
 			else
 			{
 				DEBUG_PRINT("Fallback to main thread\n");
-				//set_running_thread(_main_thread);
 				setcontext(_main_thread->context);
 			}
 		}
 	}
 }
 
-// Here just so 61-mutex.c can compile, although it obviously doesn't yield the correct result
 int thread_mutex_init(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
@@ -390,8 +392,5 @@ int thread_mutex_unlock(thread_mutex_t* mutex)
 {
 	mutex->owner = NULL;
 
-	//thread_t self = _running_thread;
-
-	//DEBUG_PRINT("Status of thread %p is %d\n", self, self->status);
 	return 0;
 }
