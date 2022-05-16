@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <ucontext.h>
 #include <valgrind/valgrind.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <signal.h>
 #include <strings.h>
 
