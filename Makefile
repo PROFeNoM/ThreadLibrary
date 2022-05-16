@@ -124,10 +124,14 @@ else
 endif
 
 test_check_exec:
-	LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$(TSTFILESCHECK)
+	for file in $(TSTFILESCHECK) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file ; \
+	done
 
 test_check_exec_c:
-	LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$(TSTFILESCHECK)_c
+	for file in $(TSTFILESCHECK)_c ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file ; \
+	done
 
 
 
