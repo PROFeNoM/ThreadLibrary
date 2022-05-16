@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Werror -g -O3 -I .
+CFLAGS = -Wall -Werror -O3 -I .
 CBIBFLAG = -DUSE_PTHREAD
 PTHREAD = -lpthread
 USEPTHREAD ?= 0
@@ -53,8 +53,8 @@ TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
-TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge
-								# $(DST_TEST_TEST)/test_sum
+TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge \
+								$(DST_TEST_TEST)/test_sum
 								# $(DST_TEST_TEST)/stack_oveflow
 
 
@@ -116,7 +116,6 @@ $(DST_TEST_TEST)/%.o: $(TEST_CHECK_DIR)/%.c
 ifeq ($(USEPTHREAD),1)
 	$(CC) $(CFLAGS) -c $^ -o $@ $(CBIBFLAG)
 else
-	echo HERE
 	$(CC) $(CFLAGS) -c $^ -o $@
 endif
 
@@ -124,19 +123,29 @@ $(DST_TEST_TEST)/%:
 ifeq ($(USEPTHREAD),1)
 	$(CC) -o $@_c $@.o $(PTHREAD)
 else
-	echo $@
 	$(CC) $@.o -L$(LDLIBRARYPATH) -o $@ -l$(LIBTHREADNAME)
 endif
 
 test_check_exec:
 	for file in $(TSTFILESCHECK) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 10 ; \
+		if [ $$file = "$(DST_TEST_TEST)/test_sum" ] ; then \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 3200 ; \
+		fi ; \
+		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 10 ; \
+		fi ; \
 	done
 
 test_check_exec_c:
 	for file in $(TSTFILESCHECK)_c ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 10 ; \
+		if [ $$file = "$(DST_TEST_TEST)/test_sum" ] ; then \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 3200 ; \
+		fi ; \
+		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 10 ; \
+		fi ; \
 	done
+
 
 
 
@@ -159,7 +168,12 @@ save_graphs:
 
 save_graphs_check:
 	for file in $(TSTFILESCHECK) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 10 ; \
+		if [ $$file = "$(DST_TEST_TEST)/test_sum" ] ; then \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 3200 ; \
+		fi ; \
+		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 10 ; \
+		fi ; \
 	done
 
 
