@@ -13,7 +13,7 @@
 
 #define OPT_DEBUG 0
 #define OPT_PROTECT_STACK 0
-#define OPT_DEADLOCK 0
+#define OPT_DEADLOCK 1
 
 #if OPT_DEBUG
 #define DEBUG_PRINT(...) fprintf(stderr, __VA_ARGS__)
@@ -309,7 +309,7 @@ int thread_join(thread_t thread, void** retval)
  * cet attribut dans votre interface tant que votre thread_exit()
  * n'est pas correctement implémenté (il ne doit jamais retourner).
  */
-void thread_exit(void* retval)
+__attribute__((__noreturn__)) void thread_exit(void* retval)
 {
 	DEBUG_PRINT("Exiting thread %p\n", _running_thread);
 	thread_t exiting_thread = _running_thread;
@@ -356,6 +356,8 @@ void thread_exit(void* retval)
 			}
 		}
 	}
+
+    exit(0);
 }
 
 int thread_mutex_init(thread_mutex_t* mutex)
