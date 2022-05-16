@@ -26,9 +26,9 @@ TSTFILES = 	$(DST_TEST_BIN)/01-main \
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
 THREADONLY =	$(DST_TEST_BIN)/21-create-many \
 							$(DST_TEST_BIN)/22-create-many-recursive \
-							$(DST_TEST_BIN)/23-create-many-once
-							# $(DST_TEST_BIN)/61-mutex
-							# $(DST_TEST_BIN)/62-mutex
+							$(DST_TEST_BIN)/23-create-many-once \
+							$(DST_TEST_BIN)/61-mutex \
+							$(DST_TEST_BIN)/62-mutex
 THREADANDYIELD =	$(DST_TEST_BIN)/31-switch-many \
 									$(DST_TEST_BIN)/32-switch-many-join \
 									$(DST_TEST_BIN)/33-switch-many-cascade
@@ -50,8 +50,9 @@ TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
-TSTFILESCHECK = $(DST_TEST_TEST)/test_sum
-								# $(DST_TEST_TEST)/stack_oveflow
+TSTFILESCHECK = $(DST_TEST_TEST)/test_sum \
+								$(DST_TEST_TEST)/stack_oveflow
+								# $(DST_TEST_TEST)/sorting_merge
 
 
 all: install
@@ -145,6 +146,13 @@ save_graphs:
 	for file_2 in $(THREADANDYIELD) ; do \
 		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_2 1000000 10 ; \
 	done
+
+
+save_graphs_check:
+	for file in $(TSTFILESCHECK) ; do \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 3200 ; \
+	done
+
 
 delete_o_bin:
 	rm -f $(DST_TEST_BIN)/*.o
