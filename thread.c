@@ -25,6 +25,7 @@
 static inline void sigsegv_handler(int signum, siginfo_t* info, void* data)
 {
 	printf("Received signal\n");
+    thread_exit(NULL);
 	exit(1);
 }
 

@@ -8,6 +8,7 @@
 #include <sys/queue.h>
 
 #define THREAD_STACK_SIZE 64*1024 // CONSTANTE à requestionner §§§§§§§§§
+//#define THREAD_STACK_SIZE 1*1024 // CONSTANTE à requestionner §§§§§§§§§
 
 enum STATUS
 {

@@ -22,7 +22,8 @@ TSTFILES = 	$(DST_TEST_BIN)/01-main \
 						$(DST_TEST_BIN)/33-switch-many-cascade \
 						$(DST_TEST_BIN)/51-fibonacci \
 						$(DST_TEST_BIN)/61-mutex \
-						$(DST_TEST_BIN)/62-mutex #$(DST_TEST_BIN)/81-deadlock
+						$(DST_TEST_BIN)/62-mutex \
+						$(DST_TEST_BIN)/91-stack-overflow#$(DST_TEST_BIN)/81-deadlock
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
 THREADONLY =	$(DST_TEST_BIN)/21-create-many \
 							$(DST_TEST_BIN)/22-create-many-recursive \
