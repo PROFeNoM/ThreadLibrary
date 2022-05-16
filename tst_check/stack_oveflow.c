@@ -12,8 +12,9 @@ struct heavy
     long long int Sylvain;
 };
 
-void * lets_go(void *)
+void * lets_go(void * p)
 {
+    printf("Pointer : %p", p);
     struct heavy heavy_struct;
     lets_go(&heavy_struct);
     return NULL;
