@@ -51,9 +51,9 @@ TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
-TSTFILESCHECK = $(DST_TEST_TEST)/test_sum \
-								$(DST_TEST_TEST)/stack_oveflow
-								# $(DST_TEST_TEST)/sorting_merge
+TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge
+								# $(DST_TEST_TEST)/test_sum
+								# $(DST_TEST_TEST)/stack_oveflow
 
 
 all: install
@@ -114,6 +114,7 @@ $(DST_TEST_TEST)/%.o: $(TEST_CHECK_DIR)/%.c
 ifeq ($(USEPTHREAD),1)
 	$(CC) $(CFLAGS) -c $^ -o $@ $(CBIBFLAG)
 else
+	echo HERE
 	$(CC) $(CFLAGS) -c $^ -o $@
 endif
 
@@ -121,17 +122,18 @@ $(DST_TEST_TEST)/%:
 ifeq ($(USEPTHREAD),1)
 	$(CC) -o $@_c $@.o $(PTHREAD)
 else
+	echo $@
 	$(CC) $@.o -L$(LDLIBRARYPATH) -o $@ -l$(LIBTHREADNAME)
 endif
 
 test_check_exec:
 	for file in $(TSTFILESCHECK) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 10 ; \
 	done
 
 test_check_exec_c:
 	for file in $(TSTFILESCHECK)_c ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 10 ; \
 	done
 
 
@@ -155,7 +157,7 @@ save_graphs:
 
 save_graphs_check:
 	for file in $(TSTFILESCHECK) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 3200 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 10 ; \
 	done
 
 

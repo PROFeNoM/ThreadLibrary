@@ -26,10 +26,10 @@ void* return_value(void* p)
 }
 
 
-int main()
+int main(int argc, char * argv[])
 {
 
-    int arrSize = 32000;
+    int arrSize = atoi(argv[1]);
     int threadReturn = 1;
     int iterateur = arrSize / threadReturn;
 

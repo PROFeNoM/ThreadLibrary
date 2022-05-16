@@ -94,6 +94,8 @@ void* merge_sort_threads(void* arg)
         merge_sort(mid + 1, high);
         merge(low, mid, high);
     }
+
+    return NULL;
 }
 
 int main()
