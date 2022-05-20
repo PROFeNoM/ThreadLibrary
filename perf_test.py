@@ -37,14 +37,14 @@ filename2 = filename1 + "_c"
 
 size_array = int(args[1])
 
-if len(args) == 3:
-    nb_yields = int(args[2])
-step = int(size_array)
+if filename1 == "install/test/test_sorting_merge":
+    step = int(size_array)
+
+if filename1 == "install/test/test_sum":
+    step = int(size_array / 100)
 
 bar = Bar.Bar('Running ' + filename1 + ' vs. ' + filename2, step=step, max=size_array / step, suffix='%(percent).1f%% - %(eta)ds')
 for i in range(1, size_array, step):
-    # print(f'Running {filename1} & {filename2} ==> {i}.' + '\r')
-
     time1.append(getTime(filename1, i))
     time2.append(getTime(filename2, i))
     bar.next()
