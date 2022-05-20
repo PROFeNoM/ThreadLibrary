@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include "thread.h"
 
+void handler_sig_seg(int signal){
+    print_log("\nSIG_SEG signal received\n"
+           "Ignoring the signal\n");
+}
+
 struct heavy
 {
     long long int Alexandre;
@@ -21,6 +26,7 @@ void * lets_go(void * p)
 
 int main(int argc, char ** argv) // Executer la fonction récursive dans un thread particulier
 {
+    signal(SIGSEGV, handler_sig_seg);
     thread_t t;
     void * res;
     int err = thread_create(&t, lets_go, NULL);
