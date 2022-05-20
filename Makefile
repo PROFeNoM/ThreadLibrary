@@ -53,9 +53,8 @@ TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
-TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge
-								
-								# $(DST_TEST_TEST)/test_sum
+TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge \
+								$(DST_TEST_TEST)/test_sum
 								# $(DST_TEST_TEST)/stack_oveflow
 
 
@@ -133,7 +132,7 @@ test_check_exec:
 			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 3200 ; \
 		fi ; \
 		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 10 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 14 ; \
 		fi ; \
 	done
 
@@ -143,7 +142,7 @@ test_check_exec_c:
 			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 3200 ; \
 		fi ; \
 		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 10 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 14 ; \
 		fi ; \
 	done
 
@@ -173,7 +172,7 @@ save_graphs_check:
 			LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 3200 ; \
 		fi ; \
 		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 10 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 14 ; \
 		fi ; \
 	done
 
