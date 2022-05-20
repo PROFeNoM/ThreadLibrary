@@ -53,8 +53,9 @@ TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
-TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge \
-								$(DST_TEST_TEST)/test_sum
+TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge
+								
+								# $(DST_TEST_TEST)/test_sum
 								# $(DST_TEST_TEST)/stack_oveflow
 
 
@@ -68,7 +69,7 @@ valgrind:
 pthreads:
 	make -B USEPTHREAD=1 our_pthreads
 
-graphs: repo_graph save_graphs
+graphs: repo_graph save_graphs graphs_check
 
 install: repositories $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
 
@@ -175,6 +176,9 @@ save_graphs_check:
 			LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 10 ; \
 		fi ; \
 	done
+
+graphs_check: test_check test_check_pthreads repo_graph save_graphs_check
+
 
 
 delete_o_bin:

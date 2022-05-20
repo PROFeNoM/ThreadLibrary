@@ -98,20 +98,32 @@ void* merge_sort_threads(void* arg)
     return NULL;
 }
 
-int main()
+int power(int number, int pow) {
+    int p = 1, i;
+	for (i = 1; i <= pow; ++i) {
+		p = p * number;
+	}
+	return p;
+
+}
+
+int main(int argc, char** argv)
 {
 
-    for (int i = 0; i < MAX; i++)
+    int pow = atoi(argv[1]); 
+    int size_array = power(2, pow);
+
+    for (int i = 0; i < size_array; i++)
         a[i] = rand() % 16384;
 
 
     struct timeval tv1, tv2;
     unsigned long us;
 
-    thread_t threads[THREAD_MAX];
+    thread_t threads[size_array];
     gettimeofday(&tv1, NULL);
 
-    for (int i = 0; i < THREAD_MAX; i++)
+    for (int i = 0; i < size_array; i++)
     {
         thread_create(&threads[i], merge_sort_threads, (void*)NULL);
         /*pthread_create(&threads[i], NULL, merge_sort_threads,
@@ -119,7 +131,7 @@ int main()
     }
 
 
-    for (int i = 0; i < THREAD_MAX; i++)
+    for (int i = 0; i < size_array; i++)
     {
         thread_join(threads[i], NULL);
     }
@@ -129,19 +141,19 @@ int main()
     int right = 0;
     int ecart = 0;
     int mid = 0;
-    int nb_threads = THREAD_MAX;
+    int nb_threads = size_array;
     int thread = 0;
 
-    for(int i=0; i<THREAD_MAX-1; i++)
+    for(int i=0; i<size_array-1; i++)
     {
 
-        ecart = MAX * 2 / nb_threads;
+        ecart = size_array * 2 / nb_threads;
 
         left = thread * ecart;
         right = (thread+1) * ecart - 1;
         mid = (left + right) / 2;
 
-        if (right == MAX - 1)
+        if (right == size_array - 1)
         {
             thread = 0;
             nb_threads /= 2;
@@ -159,9 +171,9 @@ int main()
 
     printf("TIME: %li\n", us);
 
-   for(int i=0; i<MAX; i++)
+   for(int i=0; i<size_array; i++)
    {
-        if (i < MAX-1 && a[i] > a[i+1])
+        if (i < size_array-1 && a[i] > a[i+1])
             printf("ERREUR");
 
        //printf("value: %d\n", a[i]);
