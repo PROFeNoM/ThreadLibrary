@@ -53,9 +53,11 @@ TSTFILESWITHARGS3 =	$(DST_TEST_BIN)/33-switch-many-cascade
 TSTFILESWITHARGS4 =	$(DST_TEST_BIN)/51-fibonacci
 
 TSTFILESOCHECK = $(TSTFILESCHECK:%=%.o)
-TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge
-# $(DST_TEST_TEST)/test_sum
+TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge \
+				$(DST_TEST_TEST)/test_sum
+
 # TSTFILESCHECK = $(DST_TEST_TEST)/stack_oveflow
+NICE20 = nice -20 
 
 
 all: install
@@ -129,23 +131,23 @@ endif
 test_check_exec:
 	for file in $(TSTFILESCHECK) ; do \
 		if [ $$file = "$(DST_TEST_TEST)/test_sum" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 3200 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file 3200 ; \
 		fi ; \
 		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 15 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file 15 ; \
 		fi ; \
 		if [ $$file = "$(DST_TEST_TEST)/stack_oveflow" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file ; \
 		fi ; \
 	done
 
 test_check_exec_c:
 	for file in $(TSTFILESCHECK)_c ; do \
 		if [ $$file = "$(DST_TEST_TEST)/test_sum" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 3200 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file 3200 ; \
 		fi ; \
 		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file 15 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file 15 ; \
 		fi ; \
 	done
 
@@ -162,20 +164,20 @@ repo_graph:
 
 save_graphs:
 	for file_1 in $(THREADONLY) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_1 1000000 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) taskset -c 0 python3 perf.py $$file_1 1000000 ; \
 	done
 	for file_2 in $(THREADANDYIELD) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) taskset -c 0 python3 perf.py $$file_2 1000000 10 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) taskset -c 0 python3 perf.py $$file_2 1000000 10 ; \
 	done
 
 
 save_graphs_check:
 	for file in $(TSTFILESCHECK) ; do \
 		if [ $$file = "$(DST_TEST_TEST)/test_sum" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 3200 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20)  python3 perf_test.py $$file 3200 ; \
 		fi ; \
 		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) python3 perf_test.py $$file 15 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) python3 perf_test.py $$file 15 ; \
 		fi ; \
 	done
 
@@ -193,19 +195,19 @@ delete_o_test:
 
 exec:
 	for file_1 in $(TSTFILESWITHOUTARGS) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_1 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file_1 ; \
 	done
 	for file_2 in $(TSTFILESWITHARGS1) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_2 20 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file_2 20 ; \
 	done
 	for file_3 in $(TSTFILESWITHARGS2) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_3 10 20 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file_3 10 20 ; \
 	done
 	for file_4 in $(TSTFILESWITHARGS3) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_4 20 5 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file_4 20 5 ; \
 	done
 	for file_5 in $(TSTFILESWITHARGS4) ; do \
-		LD_LIBRARY_PATH=$(LDLIBRARYPATH) ./$$file_5 8 ; \
+		LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) ./$$file_5 8 ; \
 	done
 
 

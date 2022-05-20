@@ -1,11 +1,13 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include "thread.h"
 
 void handler_sig_seg(int signal){
-    print_log("\nSIG_SEG signal received\n"
+    fprintf(stderr, "\nSIG_SEG signal received\n"
            "Ignoring the signal\n");
+    // exit(1);
 }
 
 struct heavy
