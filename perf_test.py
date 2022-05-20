@@ -22,10 +22,16 @@ def parser(result):
 
 def getTime(fileName, size_array):
     # result = subprocess.run(["LD_LIBRARY_PATH=./install/lib/ python38 perf_test.py " + fileName + " " + str(size_array)], stdout = subprocess.PIPE)
-    result = subprocess.run(["./" + fileName, str(size_array)], stdout = subprocess.PIPE)
+    result1 = subprocess.run(["./" + fileName, str(size_array)], stdout = subprocess.PIPE)
+    result2 = subprocess.run(["./" + fileName, str(size_array)], stdout = subprocess.PIPE)
+    result3 = subprocess.run(["./" + fileName, str(size_array)], stdout = subprocess.PIPE)
+
+    time1 = parser(result1)
+    time2 = parser(result2)
+    time3 = parser(result3)
 
 
-    time = parser(result)
+    time = (time1 + time2 + time3) / 3
 
     return time
 
@@ -41,7 +47,7 @@ if filename1 == "install/test/test_sorting_merge":
     step = int(size_array)
 
 if filename1 == "install/test/test_sum":
-    step = int(size_array / 100)
+    step = int(size_array / 200)
 
 bar = Bar.Bar('Running ' + filename1 + ' vs. ' + filename2, step=step, max=size_array / step, suffix='%(percent).1f%% - %(eta)ds')
 for i in range(1, size_array, step):
