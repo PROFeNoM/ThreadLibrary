@@ -84,8 +84,10 @@ void* merge_sort_threads(void* arg)
     int thread_part = part++;
 
     // calculating low and high
-    int low = thread_part * (MAX / THREAD_MAX);
-    int high = (thread_part + 1) * (MAX / THREAD_MAX) - 1;
+    // int low = thread_part * (MAX / THREAD_MAX);
+    // int high = (thread_part + 1) * (MAX / THREAD_MAX) - 1;
+    int low = thread_part;
+    int high = thread_part + 1;
 
     // evaluating mid point
     int mid = low + (high - low) / 2;
