@@ -39,8 +39,6 @@ struct thread_struct
 	int valgrind_stackid;
 	enum STATUS status;
 
-	thread_mutex_t * waited_lock;
-
 	void* retval;
 
 	int is_in_freeq; // For faster lookups

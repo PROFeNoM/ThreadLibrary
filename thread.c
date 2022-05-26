@@ -379,7 +379,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 {
 	thread_t self = _running_thread;
 
-	if (mutex->owner != NULL && mutex->owner != self)
+	if (mutex->owner != NULL && mutex->owner != self && mutex->is_valid)
 	{
 		DEBUG_PRINT("Thread %p is waiting for mutex %p (%p -> %d)\n", self, mutex, mutex->owner, mutex->owner->status);
 		self->status = LOCKED;
