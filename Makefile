@@ -24,9 +24,9 @@ TSTFILES = 	$(DST_TEST_BIN)/01-main \
 						$(DST_TEST_BIN)/51-fibonacci \
 						$(DST_TEST_BIN)/61-mutex \
 						$(DST_TEST_BIN)/62-mutex \
-						$(DST_TEST_BIN)/91-stack-overflow \
 						$(DST_TEST_BIN)/71-preemption \
-						$(DST_TEST_BIN)/81-deadlock
+						$(DST_TEST_BIN)/81-deadlock \
+						#$(DST_TEST_BIN)/91-stack-overflow
 LIBTHREAD = $(DST_TEST_LIB)/libthread.so
 
 
@@ -72,8 +72,10 @@ all: install
 
 check: install exec test_check test_check_pthreads our_test_check_pthreads our_pthreads
 
-valgrind:
-	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
+valgrind: $(TSTFILES)
+	for file in $^; do \
+		LD_LIBRARY_PATH=$(DST_TEST_LIB) valgrind --leak-check=full --show-reachable=yes --track-origins=yes $${file} 5 5; \
+	done
 
 pthreads:
 	make -B USEPTHREAD=1 our_pthreads
