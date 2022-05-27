@@ -70,7 +70,7 @@ NICE20 = nice -20
 
 all: install
 
-check: install exec test_check test_check_pthreads
+check: install exec test_check test_check_pthreads our_test_check_pthreads our_pthreads
 
 valgrind:
 	valgrind --leak-check=full --show-reachable=yes --track-origins=yes $(TSTFILES)
@@ -80,7 +80,7 @@ pthreads:
 
 graphs: repo_graph save_graphs graphs_check
 
-install: repositories $(TSTFILESO) $(LIBTHREAD) $(TSTFILES) delete_o_bin
+install: repositories $(TSTFILESO) $(TSTFILESOCHECK) $(LIBTHREAD) $(TSTFILES) $(TSTFILESCHECK) delete_o_bin delete_o_test
 
 
 utils.o: utils.c
