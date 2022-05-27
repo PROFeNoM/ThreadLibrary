@@ -235,6 +235,12 @@ int thread_join(thread_t thread, void** retval)
 		return 0;
 	}
 
+	if (to_wait->status == LOCKED)
+	{
+		// If the thread is locked, we need to remove it from the freeq
+		TAILQ_REMOVE(&freeq, to_wait, next_freeq);
+	}
+
 	to_wait->previous_thread = waiting_thread;
 	waiting_thread->status = WAITING;
 	DEBUG_PRINT("Thread %p (%d) waiting for thread %p (%d)\n",
@@ -384,6 +390,7 @@ int thread_mutex_lock(thread_mutex_t* mutex)
 		DEBUG_PRINT("Thread %p is waiting for mutex %p (%p -> %d)\n", self, mutex, mutex->owner, mutex->owner->status);
 		self->status = LOCKED;
 		TAILQ_INSERT_TAIL(&mutex->waiting_threads, self, next_runq);
+		TAILQ_INSERT_TAIL(&freeq, self, next_freeq);
 		if (mutex->owner->status == READY) TAILQ_REMOVE(&runq, mutex->owner, next_runq);
 		set_running_thread(mutex->owner);
 		swapcontext(self->context, mutex->owner->context);
