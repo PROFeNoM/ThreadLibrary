@@ -44,7 +44,7 @@ filename2 = filename1 + "_c"
 size_array = int(args[1])
 
 if filename1 == "install/test/test_sorting_merge":
-    step = 1
+    step = int(size_array / 200)
 
 if filename1 == "install/test/test_sum":
     step = int(size_array / 200)

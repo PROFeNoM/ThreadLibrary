@@ -57,7 +57,7 @@ TSTFILESCHECK = $(DST_TEST_TEST)/test_sorting_merge \
 				$(DST_TEST_TEST)/test_sum
 
 # TSTFILESCHECK = $(DST_TEST_TEST)/stack_oveflow
-NICE20 = nice -20 
+NICE20 = nice -20
 
 
 all: install
@@ -177,7 +177,7 @@ save_graphs_check:
 			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20)  python3 perf_test.py $$file 3200 ; \
 		fi ; \
 		if [ $$file = "$(DST_TEST_TEST)/test_sorting_merge" ] ; then \
-			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) python3 perf_test.py $$file 15 ; \
+			LD_LIBRARY_PATH=$(LDLIBRARYPATH) $(NICE20) python3 perf_test.py $$file 5000 ; \
 		fi ; \
 	done
 

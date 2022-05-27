@@ -4,182 +4,174 @@
 #include <sys/time.h>
 #include "../thread.h"
 #include <pthread.h>
+#include <string.h>
 #include <time.h>
 
-#define MAX 524288
-#define THREAD_MAX 524288
+#define MAX 20000
 
 
-// array of size MAX
-int a[MAX];
-int part = 0;
+int* main_array;
 
-// merge function for merging two parts
-void merge(int low, int mid, int high)
+
+typedef struct
 {
-    //int* left = new int[mid - low + 1];
-    //int* right = new int[high - mid];
-    int* left = calloc(mid - low + 1, sizeof(int));
-    int* right = calloc(high - mid, sizeof(int));
+    int start;
+    int end;
 
-    // n1 is size of left part and n2 is size
-    // of right part
-    int n1 = mid - low + 1, n2 = high - mid, i, j;
+} arrayFusion;
 
-    // storing values in left part
-    for (i = 0; i < n1; i++)
-        left[i] = a[i + low];
 
-    // storing values in right part
-    for (i = 0; i < n2; i++)
-        right[i] = a[i + mid + 1];
+arrayFusion* fusion(arrayFusion* p_array1, arrayFusion* p_array2)
+{
+    int size1 = p_array1->end - p_array1->start + 1;
+    int size2 = p_array2->end - p_array2->start + 1;
+    int size_combined = size1 + size2;
 
-    int k = low;
-    i = j = 0;
+    int temp[size_combined];
 
-    // merge left and right in ascending order
-    while (i < n1 && j < n2) {
-        if (left[i] <= right[j])
-            a[k++] = left[i++];
+    int p1 = p_array1->start;
+    int p2 = p_array2->start;
+
+    int main_p = (p1 < p2) ? p1 : p2;
+    int i = 0;
+
+
+    while (i < size_combined)
+    {
+        if (size1 <= 0)
+        {
+            temp[i] = main_array[p2];
+            size2--;
+            p2++;
+        }
+        else if (size2 <= 0)
+        {
+            temp[i] = main_array[p1];
+            p1++;
+            size1--;
+        }
+        else if (main_array[p1] < main_array[p2])
+        {
+            temp[i] = main_array[p1];
+            size1--;
+            p1++;
+        }
         else
-            a[k++] = right[j++];
+        {
+            temp[i] = main_array[p2];
+            size2--;
+            p2++;
+        }
+
+        i++;
     }
 
-    // insert remaining values from left
-    while (i < n1) {
-        a[k++] = left[i++];
+    free(p_array1);
+    free(p_array2);
+
+    // Changing main
+    for(int i=0; i<size_combined; i++)
+    {
+        main_array[main_p + i] = temp[i];
     }
 
-    // insert remaining values from right
-    while (j < n2) {
-        a[k++] = right[j++];
-    }
+    arrayFusion* fusion = malloc(sizeof(arrayFusion));
+    fusion->start = main_p;
+    fusion->end = main_p + size_combined - 1;
 
-    free(left);
-    free(right);
+    return fusion;
 }
 
-// merge sort function
-void merge_sort(int low, int high)
+void* triFusion(void* array)
 {
-    // calculating mid point of array
-    int mid = low + (high - low) / 2;
-    if (low < high) {
+    arrayFusion* p_array = (arrayFusion*) array;
+    int size = (p_array->end - p_array->start) + 1;
 
-        // calling first half
-        merge_sort(low, mid);
+    if (size <= 1)
+    {
+        void* p_arr = malloc(sizeof(void*));
+        memcpy(p_arr, array, sizeof(void*));
+        return p_arr;
+    }
+    else
+    {
+        // Dividing array by 2
+        int new_start = p_array->start;
+        int new_end = p_array->end;
+        int new_size = size / 2;
 
-        // calling second half
-        merge_sort(mid + 1, high);
+        arrayFusion array1 = {.start = new_start, .end = new_start + new_size - 1};
+        arrayFusion* parray1 = &array1;
+        arrayFusion array2 = {.start = new_start + new_size, .end = new_end};
+        arrayFusion* parray2 = &array2;
 
-        // merging the two halves
-        merge(low, mid, high);
+        // Threads part
+        thread_t new1;
+        thread_create(&new1, triFusion, (void*) parray1);
+        thread_t new2;
+        thread_create(&new2, triFusion, (void*) parray2);
+
+        arrayFusion sorted_arr1;
+        arrayFusion sorted_arr2;
+        void* test1 = (void *) &sorted_arr1;
+        void* test2 = (void *) &sorted_arr2;
+        void** retval1 = &test1;
+        void** retval2 = &test2;
+        thread_join(new1, retval1);
+        thread_join(new2, retval2);
+
+        void* p_retval1 = *retval1;
+        void* p_retval2 = *retval2;
+        arrayFusion* arr_retval1 = (arrayFusion*) p_retval1;
+        arrayFusion* arr_retval2 = (arrayFusion*) p_retval2;
+
+
+        return (void *) fusion(arr_retval1, arr_retval2);
     }
 }
 
-// thread function for multi-threading
-void* merge_sort_threads(void* arg)
-{
-    // which part out of 4 parts
-    int thread_part = part++;
-
-    // calculating low and high
-    // int low = thread_part * (MAX / THREAD_MAX);
-    // int high = (thread_part + 1) * (MAX / THREAD_MAX) - 1;
-    int low = thread_part;
-    int high = thread_part + 1;
-
-    // evaluating mid point
-    int mid = low + (high - low) / 2;
-    if (low < high) {
-        merge_sort(low, mid);
-        merge_sort(mid + 1, high);
-        merge(low, mid, high);
-    }
-
-    return NULL;
-}
-
-int power(int number, int pow) {
-    int p = 1, i;
-	for (i = 1; i <= pow; ++i) {
-		p = p * number;
-	}
-	return p;
-
-}
 
 int main(int argc, char** argv)
 {
+    if (argc < 1)
+    {
+        printf("Besoin d'un argument passé en paramètre\n");
+        exit(0);
+    }
 
-    int pow = atoi(argv[1]); 
-    int size_array = power(2, pow);
+    int size_array = atoi(argv[1]);
+    main_array = (int*) malloc(size_array * sizeof(int));
 
-    for (int i = 0; i < size_array; i++)
-        a[i] = rand() % 16384;
-
+    for(int i=0; i<size_array; i++)
+    {
+        main_array[i] = rand() % MAX;
+    }
 
     struct timeval tv1, tv2;
     unsigned long us;
 
-    thread_t threads[size_array];
     gettimeofday(&tv1, NULL);
 
-    for (int i = 0; i < size_array; i++)
-    {
-        thread_create(&threads[i], merge_sort_threads, (void*)NULL);
-        /*pthread_create(&threads[i], NULL, merge_sort_threads,
-                                        (void*)NULL);*/
-    }
-
-
-    for (int i = 0; i < size_array; i++)
-    {
-        thread_join(threads[i], NULL);
-    }
-
-    // Merge final parts
-    int left = 0;
-    int right = 0;
-    int ecart = 0;
-    int mid = 0;
-    int nb_threads = size_array;
-    int thread = 0;
-
-    for(int i=0; i<size_array-1; i++)
-    {
-
-        ecart = size_array * 2 / nb_threads;
-
-        left = thread * ecart;
-        right = (thread+1) * ecart - 1;
-        mid = (left + right) / 2;
-
-        if (right == size_array - 1)
-        {
-            thread = 0;
-            nb_threads /= 2;
-        }
-        else
-        {
-            thread++;
-        }
-
-        merge(left, mid, right);
-    }
+    arrayFusion arr = {.start = 0, .end = size_array-1};
+    arrayFusion* parr = &arr;
+    parr->start = 0;
+    parr->end = size_array-1;
+    thread_t main_thread;
+    thread_create(&main_thread, triFusion, (void *) parr);
+    void* retval_main = NULL;
+    thread_join(main_thread, &retval_main);
 
     gettimeofday(&tv2, NULL);
     us = (tv2.tv_sec-tv1.tv_sec)*1000000+(tv2.tv_usec-tv1.tv_usec);
 
     printf("TIME: %li\n", us);
+    for(int i=0; i<size_array; i++)
+    {
+        printf("value: %d\n", main_array[i]);
+    }
 
-   for(int i=0; i<size_array; i++)
-   {
-        if (i < size_array-1 && a[i] > a[i+1])
-            printf("ERREUR");
-
-       //printf("value: %d\n", a[i]);
-   }
+   free(main_array);
+   free(retval_main);
 
     return 0;
 }
